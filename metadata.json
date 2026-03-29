@@ -1,0 +1,5 @@
+{
+  "name": "Valve AI Pro",
+  "description": "SaaS backend for deterministic RFQ matching",
+  "requestFramePermissions": []
+}
