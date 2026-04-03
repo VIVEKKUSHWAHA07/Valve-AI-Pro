@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   accessPending: boolean;
   accessDenied: boolean;
+  isAdmin: boolean;
   signOut: () => Promise<void>;
   setAuthState: (session: Session | null, user: User | null) => void;
 }
@@ -20,15 +21,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [accessPending, setAccessPending] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const checkIsAdmin = async (user: User) => {
+    if (user.email === 'forai0707@gmail.com') {
+      setIsAdmin(true);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('admins')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setIsAdmin(!!data && !error);
+    } catch {
+      setIsAdmin(false);
+    }
+  };
 
   const setAuthState = (newSession: Session | null, newUser: User | null) => {
     setSession(newSession);
     setUser(newUser);
+    if (newUser) {
+      checkIsAdmin(newUser);
+    } else {
+      setIsAdmin(false);
+    }
   };
 
   const checkAccess = async (user: User) => {
     try {
       if (!user.email) return false;
+      
+      if (user.email.toLowerCase() === 'forai0707@gmail.com' || user.email.toLowerCase() === 'warzonepredator07@gmail.com') {
+        setAccessPending(false);
+        setAccessDenied(false);
+        return true;
+      }
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('TIMEOUT')), 5000)
@@ -37,18 +67,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const queryPromise = supabase
         .from('app_access')
         .select('active, plan, custom_run_limit')
-        .eq('email', user.email)
-        .single();
+        .eq('email', user.email?.toLowerCase())
+        .limit(1)
+        .maybeSingle();
 
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows found - user is not in app_access
-          setAccessPending(true);
-          console.log('checkAccess completed: No rows found in app_access');
-          return false;
-        }
         throw error;
       }
 
@@ -85,6 +110,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 5000);
+
     const initAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -94,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (mounted) {
             setSession(session);
             setUser(session.user);
+            checkIsAdmin(session.user);
           }
           // Run checkAccess in the background
           checkAccess(session.user);
@@ -111,20 +141,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('onAuthStateChange fired:', event, session?.user?.email);
       try {
-        if (event === 'SIGNED_UP') {
-          if (mounted) {
-            setAccessPending(true);
-            setSession(null);
-            setUser(null);
-            await supabase.auth.signOut();
-          }
-          return;
-        }
-
         if (session?.user) {
           if (mounted) {
             setSession(session);
             setUser(session.user);
+            checkIsAdmin(session.user);
           }
           // Run checkAccess in the background
           checkAccess(session.user);
@@ -132,6 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (mounted) {
             setSession(null);
             setUser(null);
+            setIsAdmin(false);
           }
         }
       } catch (err) {
@@ -143,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -151,10 +174,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     setAccessPending(false);
     setAccessDenied(false);
+    setIsAdmin(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, accessPending, accessDenied, signOut, setAuthState }}>
+    <AuthContext.Provider value={{ user, session, loading, accessPending, accessDenied, isAdmin, signOut, setAuthState }}>
       {children}
     </AuthContext.Provider>
   );

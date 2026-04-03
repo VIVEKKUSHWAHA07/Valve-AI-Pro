@@ -16,6 +16,7 @@ import { RulesEditor } from './pages/RulesEditor';
 import { TestPanel } from './pages/TestPanel';
 import { Profile } from './pages/Profile';
 import { AdminPanel } from './pages/AdminPanel';
+import { Catalogue } from './pages/Catalogue';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -47,14 +48,14 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-[#050B14] p-4 text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Something went wrong.</h1>
-          <p className="text-slate-600 dark:text-slate-400 mb-4 max-w-md">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-[#0F1117] p-4 text-center" style={{ backgroundImage: 'linear-gradient(rgba(126,231,135,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(126,231,135,0.03) 1px, transparent 1px)', backgroundSize: '32px 32px' }}>
+          <h1 className="text-2xl font-bold text-red-600 dark:text-[#F85149] mb-4">Something went wrong.</h1>
+          <p className="text-slate-600 dark:text-[#8B949E] mb-4 max-w-md">
             {this.state.error?.message || 'An unexpected error occurred.'}
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-[#00A8FF] text-white rounded-lg hover:bg-[#008DE6] transition-colors"
+            className="px-4 py-2 bg-[#00A8FF] dark:bg-[#238636] text-white rounded-lg hover:bg-[#008DE6] dark:hover:bg-[#2EA043] transition-colors"
           >
             Reload Page
           </button>
@@ -71,8 +72,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#050B14]">
-        <div className="w-8 h-8 border-4 border-[#00A8FF] border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0F1117]" style={{ backgroundImage: 'linear-gradient(rgba(126,231,135,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(126,231,135,0.03) 1px, transparent 1px)', backgroundSize: '32px 32px' }}>
+        <div className="w-8 h-8 border-4 border-[#00A8FF] dark:border-[#7EE787] border-t-transparent dark:border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -90,7 +91,8 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <Router>
-            <div className="min-h-screen font-sans text-slate-900 dark:text-slate-200 selection:bg-[#00A8FF]/30 selection:text-slate-900 dark:selection:text-white transition-colors duration-300">
+            <div className="min-h-screen font-sans text-slate-900 dark:text-[#E6EDF3] selection:bg-[#00A8FF]/30 selection:text-slate-900 dark:selection:bg-[rgba(126,231,135,0.2)] dark:selection:text-[#7EE787] transition-colors duration-300 bg-slate-50 dark:bg-[#0F1117]">
+              <div className="hidden dark:block fixed inset-0 pointer-events-none z-[-1]" style={{ backgroundImage: 'linear-gradient(rgba(126,231,135,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(126,231,135,0.03) 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
               <Navbar />
               <Routes>
                 <Route path="/" element={<Home />} />
@@ -108,6 +110,14 @@ export default function App() {
                   element={
                     <ProtectedRoute>
                       <Upload />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/catalogue" 
+                  element={
+                    <ProtectedRoute>
+                      <Catalogue />
                     </ProtectedRoute>
                   } 
                 />

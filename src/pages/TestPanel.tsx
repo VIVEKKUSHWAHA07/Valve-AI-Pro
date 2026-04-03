@@ -140,22 +140,22 @@ export function TestPanel() {
     <div className="max-w-7xl mx-auto mt-8 px-6 space-y-8 pb-20">
       <button 
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 mb-4"
+        className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-[#E6EDF3] mb-4"
       >
         ← Back
       </button>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-3xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-3">
-            <Beaker className="w-8 h-8 text-green-500" />
+          <h1 className="text-3xl font-display font-bold text-slate-900 dark:text-[#E6EDF3] flex items-center gap-3">
+            <Beaker className="w-8 h-8 text-[#7EE787]" />
             Test Panel
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">Verify engine logic and catalogue matching</p>
+          <p className="text-slate-600 dark:text-[#8B949E] mt-1">Verify engine logic and catalogue matching</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <div className="bg-white dark:bg-[#161B22] rounded-xl border border-slate-200 dark:border-[#21262D] shadow-sm overflow-hidden">
+        <div className="flex overflow-x-auto border-b border-slate-200 dark:border-[#21262D] bg-slate-50 dark:bg-[#0D1117]">
           {[
             { id: 'single', label: 'Section A: Single Row Tester' },
             { id: 'fuzzy', label: 'Section B: Fuzzy Match Tester' },
@@ -167,8 +167,8 @@ export function TestPanel() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors ${
                 activeTab === tab.id
-                  ? 'border-b-2 border-green-500 text-green-600 dark:text-green-400 bg-white dark:bg-slate-800'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                  ? 'border-b-2 border-[#7EE787] text-[#7EE787] dark:text-[#7EE787] bg-white dark:bg-[#161B22]'
+                  : 'text-slate-600 dark:text-[#8B949E] hover:text-slate-900 dark:hover:text-[#E6EDF3] hover:bg-slate-100 dark:hover:bg-[#21262D]'
               }`}
             >
               {tab.label}
@@ -181,80 +181,80 @@ export function TestPanel() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Input Data</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-[#E6EDF3]">Input Data</h3>
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-[#E6EDF3] mb-1">Description</label>
                       <input 
                         type="text" 
                         value={singleInput.desc}
                         onChange={(e) => setSingleInput({...singleInput, desc: e.target.value})}
-                        className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500" 
+                        className="w-full rounded-lg border-slate-300 dark:border-[#21262D] bg-white dark:bg-[#0D1117] text-slate-900 dark:text-[#E6EDF3] focus:ring-[#7EE787] focus:border-[#7EE787]" 
                         placeholder="e.g. GTV 6&quot; CL600 A105 BWE REDUCED BORE" 
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Rating</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-[#E6EDF3] mb-1">Rating</label>
                         <input 
                           type="text" 
                           value={singleInput.rating}
                           onChange={(e) => setSingleInput({...singleInput, rating: e.target.value})}
-                          className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500" 
+                          className="w-full rounded-lg border-slate-300 dark:border-[#21262D] bg-white dark:bg-[#0D1117] text-slate-900 dark:text-[#E6EDF3] focus:ring-[#7EE787] focus:border-[#7EE787]" 
                           placeholder="150#" 
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Size</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-[#E6EDF3] mb-1">Size</label>
                         <input 
                           type="text" 
                           value={singleInput.size}
                           onChange={(e) => setSingleInput({...singleInput, size: e.target.value})}
-                          className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500" 
+                          className="w-full rounded-lg border-slate-300 dark:border-[#21262D] bg-white dark:bg-[#0D1117] text-slate-900 dark:text-[#E6EDF3] focus:ring-[#7EE787] focus:border-[#7EE787]" 
                           placeholder="6&quot;" 
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Body/MOC</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-[#E6EDF3] mb-1">Body/MOC</label>
                         <input 
                           type="text" 
                           value={singleInput.body}
                           onChange={(e) => setSingleInput({...singleInput, body: e.target.value})}
-                          className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500" 
+                          className="w-full rounded-lg border-slate-300 dark:border-[#21262D] bg-white dark:bg-[#0D1117] text-slate-900 dark:text-[#E6EDF3] focus:ring-[#7EE787] focus:border-[#7EE787]" 
                           placeholder="A105" 
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Trim</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-[#E6EDF3] mb-1">Trim</label>
                         <input 
                           type="text" 
                           value={singleInput.trim}
                           onChange={(e) => setSingleInput({...singleInput, trim: e.target.value})}
-                          className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500" 
+                          className="w-full rounded-lg border-slate-300 dark:border-[#21262D] bg-white dark:bg-[#0D1117] text-slate-900 dark:text-[#E6EDF3] focus:ring-[#7EE787] focus:border-[#7EE787]" 
                           placeholder="TRIM 8" 
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">End Type</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-[#E6EDF3] mb-1">End Type</label>
                         <input 
                           type="text" 
                           value={singleInput.endType}
                           onChange={(e) => setSingleInput({...singleInput, endType: e.target.value})}
-                          className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500" 
+                          className="w-full rounded-lg border-slate-300 dark:border-[#21262D] bg-white dark:bg-[#0D1117] text-slate-900 dark:text-[#E6EDF3] focus:ring-[#7EE787] focus:border-[#7EE787]" 
                           placeholder="BWE" 
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Construction</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-[#E6EDF3] mb-1">Construction</label>
                         <input 
                           type="text" 
                           value={singleInput.construct}
                           onChange={(e) => setSingleInput({...singleInput, construct: e.target.value})}
-                          className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500" 
+                          className="w-full rounded-lg border-slate-300 dark:border-[#21262D] bg-white dark:bg-[#0D1117] text-slate-900 dark:text-[#E6EDF3] focus:ring-[#7EE787] focus:border-[#7EE787]" 
                           placeholder="FLOAT" 
                         />
                       </div>
@@ -263,21 +263,21 @@ export function TestPanel() {
                   <button 
                     onClick={handleSingleTest}
                     disabled={isSingleLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#238636] to-[#2EA043] hover:from-[#2EA043] hover:to-[#3FB950] shadow-[0_0_15px_rgba(126,231,135,0.2)] hover:shadow-[0_0_25px_rgba(126,231,135,0.4)] text-white px-4 py-2.5 rounded-lg font-medium transition-all disabled:opacity-50"
                   >
                     {isSingleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} 
                     {isSingleLoading ? 'Running...' : 'Run Engine'}
                   </button>
                   {singleError && (
-                    <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg text-sm text-red-600 dark:text-red-400">
+                    <div className="p-3 bg-red-50 dark:bg-[#F85149]/10 border border-red-200 dark:border-[#F85149]/30 rounded-lg text-sm text-red-600 dark:text-[#F85149]">
                       {singleError}
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Output Results</h3>
-                  <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3 min-h-[400px]">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-[#E6EDF3]">Output Results</h3>
+                  <div className="bg-slate-50 dark:bg-[#0D1117] border border-slate-200 dark:border-[#21262D] rounded-xl p-4 space-y-3 min-h-[400px]">
                     {singleResult ? (
                       <>
                         {[
@@ -294,20 +294,20 @@ export function TestPanel() {
                           { label: 'End Detail', value: singleResult.processedRow.endDetail, rule: 'Rule 11 — End Detail' },
                           { label: 'Bolting', value: singleResult.processedRow.bolting, rule: 'Rule 12 — Bolting' },
                         ].map((item, idx) => (
-                          <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700/50 last:border-0">
+                          <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-200 dark:border-[#21262D] last:border-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-slate-500 dark:text-slate-400 w-24">{item.label}</span>
-                              <span className="text-sm font-semibold text-slate-900 dark:text-white">{item.value || '-'}</span>
+                              <span className="text-sm font-medium text-slate-500 dark:text-[#8B949E] w-24">{item.label}</span>
+                              <span className="text-sm font-semibold text-slate-900 dark:text-[#E6EDF3]">{item.value || '-'}</span>
                             </div>
-                            <span className="text-xs text-green-600 dark:text-green-400 mt-1 sm:mt-0 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded">{item.rule}</span>
+                            <span className="text-xs text-[#7EE787] dark:text-[#7EE787] mt-1 sm:mt-0 bg-green-50 dark:bg-[rgba(126,231,135,0.1)] px-2 py-1 rounded">{item.rule}</span>
                           </div>
                         ))}
                         {singleResult.flags && singleResult.flags.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-2">Flags Generated</h4>
+                          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-[#21262D]">
+                            <h4 className="text-sm font-semibold text-slate-900 dark:text-[#E6EDF3] mb-2">Flags Generated</h4>
                             <ul className="space-y-2">
                               {singleResult.flags.map((flag: any, idx: number) => (
-                                <li key={idx} className={`text-xs px-2 py-1 rounded ${flag.type === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
+                                <li key={idx} className={`text-xs px-2 py-1 rounded ${flag.type === 'critical' ? 'bg-red-100 text-red-800 dark:bg-[#F85149]/10 dark:text-[#F85149]' : 'bg-yellow-100 text-yellow-800 dark:bg-[#F0883E]/10 dark:text-[#F0883E]'}`}>
                                   {flag.field}: {flag.message}
                                 </li>
                               ))}
@@ -316,7 +316,7 @@ export function TestPanel() {
                         )}
                       </>
                     ) : (
-                      <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">
+                      <div className="flex items-center justify-center h-full text-slate-400 dark:text-[#8B949E]">
                         Run the engine to see results
                       </div>
                     )}
@@ -334,13 +334,13 @@ export function TestPanel() {
                   value={fuzzyInput}
                   onChange={(e) => setFuzzyInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleFuzzyTest()}
-                  className="flex-grow rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500" 
+                  className="flex-grow rounded-lg border-slate-300 dark:border-[#21262D] bg-white dark:bg-[#0D1117] text-slate-900 dark:text-[#E6EDF3] focus:ring-[#7EE787] focus:border-[#7EE787]" 
                   placeholder="Paste valve description here..." 
                 />
                 <button 
                   onClick={handleFuzzyTest}
                   disabled={isFuzzyLoading || !fuzzyInput.trim()}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#238636] to-[#2EA043] hover:from-[#2EA043] hover:to-[#3FB950] shadow-[0_0_15px_rgba(126,231,135,0.2)] hover:shadow-[0_0_25px_rgba(126,231,135,0.4)] text-white px-6 py-2.5 rounded-lg font-medium transition-all disabled:opacity-50"
                 >
                   {isFuzzyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} 
                   {isFuzzyLoading ? 'Testing...' : 'Test Fuzzy Match'}
@@ -348,40 +348,40 @@ export function TestPanel() {
               </div>
               
               {fuzzyError && (
-                <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg text-sm text-red-600 dark:text-red-400">
+                <div className="p-3 bg-red-50 dark:bg-[#F85149]/10 border border-red-200 dark:border-[#F85149]/30 rounded-lg text-sm text-red-600 dark:text-[#F85149]">
                   {fuzzyError}
                 </div>
               )}
 
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Top Catalogue Matches</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-[#E6EDF3]">Top Catalogue Matches</h3>
                 {fuzzyResult ? (
                   fuzzyResult.length > 0 ? (
                     fuzzyResult.map((match, idx) => (
-                      <div key={idx} className={`p-4 rounded-xl border ${match.pass ? 'bg-green-50 dark:bg-green-500/5 border-green-200 dark:border-green-500/30' : 'bg-red-50 dark:bg-red-500/5 border-red-200 dark:border-red-500/30'}`}>
+                      <div key={idx} className={`p-4 rounded-xl border ${match.pass ? 'bg-green-50 dark:bg-[rgba(126,231,135,0.05)] border-green-200 dark:border-[rgba(126,231,135,0.3)]' : 'bg-red-50 dark:bg-[#F85149]/5 border-red-200 dark:border-[#F85149]/30'}`}>
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex items-center gap-2">
-                            {match.pass ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />}
-                            <span className={`font-bold ${match.pass ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>Score: {match.score} / 140</span>
+                            {match.pass ? <CheckCircle2 className="w-5 h-5 text-[#7EE787]" /> : <XCircle className="w-5 h-5 text-red-500" />}
+                            <span className={`font-bold ${match.pass ? 'text-green-700 dark:text-[#7EE787]' : 'text-red-700 dark:text-[#F85149]'}`}>Score: {match.score} / 140</span>
                           </div>
-                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${match.pass ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'}`}>
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${match.pass ? 'bg-green-100 text-green-800 dark:bg-[rgba(126,231,135,0.1)] dark:text-[#7EE787]' : 'bg-red-100 text-red-800 dark:bg-[#F85149]/10 dark:text-[#F85149]'}`}>
                             {match.pass ? 'PASS' : 'FAIL (< 70)'}
                           </span>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
-                          <div><span className="text-slate-500 dark:text-slate-400 block text-xs">Type (+50)</span><span className="font-medium text-slate-900 dark:text-white">{match.type}</span></div>
-                          <div><span className="text-slate-500 dark:text-slate-400 block text-xs">Size (+30)</span><span className="font-medium text-slate-900 dark:text-white">{match.size}</span></div>
-                          <div><span className="text-slate-500 dark:text-slate-400 block text-xs">Class (+30)</span><span className="font-medium text-slate-900 dark:text-white">{match.class}</span></div>
-                          <div><span className="text-slate-500 dark:text-slate-400 block text-xs">MOC (+10)</span><span className="font-medium text-slate-900 dark:text-white">{match.moc}</span></div>
-                          <div><span className="text-slate-500 dark:text-slate-400 block text-xs">Trim (+10)</span><span className="font-medium text-slate-900 dark:text-white">{match.trim}</span></div>
+                          <div><span className="text-slate-500 dark:text-[#8B949E] block text-xs">Type (+50)</span><span className="font-medium text-slate-900 dark:text-[#E6EDF3]">{match.type}</span></div>
+                          <div><span className="text-slate-500 dark:text-[#8B949E] block text-xs">Size (+30)</span><span className="font-medium text-slate-900 dark:text-[#E6EDF3]">{match.size}</span></div>
+                          <div><span className="text-slate-500 dark:text-[#8B949E] block text-xs">Class (+30)</span><span className="font-medium text-slate-900 dark:text-[#E6EDF3]">{match.class}</span></div>
+                          <div><span className="text-slate-500 dark:text-[#8B949E] block text-xs">MOC (+10)</span><span className="font-medium text-slate-900 dark:text-[#E6EDF3]">{match.moc}</span></div>
+                          <div><span className="text-slate-500 dark:text-[#8B949E] block text-xs">Trim (+10)</span><span className="font-medium text-slate-900 dark:text-[#E6EDF3]">{match.trim}</span></div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-slate-500 dark:text-slate-400">No matches found.</div>
+                    <div className="text-slate-500 dark:text-[#8B949E]">No matches found.</div>
                   )
                 ) : (
-                  <div className="text-slate-500 dark:text-slate-400">Enter a description and run the test to see matches.</div>
+                  <div className="text-slate-500 dark:text-[#8B949E]">Enter a description and run the test to see matches.</div>
                 )}
               </div>
             </div>
@@ -395,13 +395,13 @@ export function TestPanel() {
                   value={traceInput}
                   onChange={(e) => setTraceInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleTraceTest()}
-                  className="flex-grow rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500" 
+                  className="flex-grow rounded-lg border-slate-300 dark:border-[#21262D] bg-white dark:bg-[#0D1117] text-slate-900 dark:text-[#E6EDF3] focus:ring-[#7EE787] focus:border-[#7EE787]" 
                   placeholder="Paste valve description here..." 
                 />
                 <button 
                   onClick={handleTraceTest}
                   disabled={isTraceLoading || !traceInput.trim()}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#238636] to-[#2EA043] hover:from-[#2EA043] hover:to-[#3FB950] shadow-[0_0_15px_rgba(126,231,135,0.2)] hover:shadow-[0_0_25px_rgba(126,231,135,0.4)] text-white px-6 py-2.5 rounded-lg font-medium transition-all disabled:opacity-50"
                 >
                   {isTraceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} 
                   {isTraceLoading ? 'Generating...' : 'Generate Trace'}
@@ -409,20 +409,20 @@ export function TestPanel() {
               </div>
               
               {traceError && (
-                <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg text-sm text-red-600 dark:text-red-400">
+                <div className="p-3 bg-red-50 dark:bg-[#F85149]/10 border border-red-200 dark:border-[#F85149]/30 rounded-lg text-sm text-red-600 dark:text-[#F85149]">
                   {traceError}
                 </div>
               )}
 
-              <div className="bg-slate-900 rounded-xl p-6 font-mono text-sm text-green-400 space-y-2 overflow-x-auto min-h-[200px]">
+              <div className="bg-[#0D1117] rounded-xl p-6 font-mono text-sm text-[#7EE787] space-y-2 overflow-x-auto min-h-[200px]">
                 {traceResult ? (
                   traceResult.map((step, idx) => (
-                    <div key={idx} className={step.startsWith('>') ? '' : 'text-slate-400 mt-4'}>
+                    <div key={idx} className={step.startsWith('>') ? '' : 'text-[#8B949E] mt-4'}>
                       {step}
                     </div>
                   ))
                 ) : (
-                  <div className="text-slate-500">Enter a description and generate a trace to see the engine's step-by-step logic.</div>
+                  <div className="text-[#8B949E]">Enter a description and generate a trace to see the engine's step-by-step logic.</div>
                 )}
               </div>
             </div>
@@ -430,9 +430,9 @@ export function TestPanel() {
 
           {activeTab === 'batch' && (
             <div className="space-y-6">
-              <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-slate-50 dark:bg-slate-800/50">
-                <FileSpreadsheet className="w-10 h-10 text-green-500 mb-4" />
-                <p className="text-slate-600 dark:text-slate-400 mb-4">Upload a small test RFQ (5-10 rows) to compare engine output against expected output.</p>
+              <div className="border-2 border-dashed border-slate-300 dark:border-[#21262D] rounded-xl p-8 flex flex-col items-center justify-center text-center bg-slate-50 dark:bg-[#0D1117]">
+                <FileSpreadsheet className="w-10 h-10 text-[#7EE787] mb-4" />
+                <p className="text-slate-600 dark:text-[#8B949E] mb-4">Upload a small test RFQ (5-10 rows) to compare engine output against expected output.</p>
                 <input 
                   type="file" 
                   ref={fileInputRef} 
@@ -443,36 +443,36 @@ export function TestPanel() {
                 <div className="flex gap-4">
                   <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-6 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                    className="px-6 py-2.5 bg-white dark:bg-[#21262D] border border-slate-200 dark:border-[#30363D] rounded-lg text-sm font-medium text-slate-700 dark:text-[#E6EDF3] hover:bg-slate-50 dark:hover:bg-[#30363D] transition-colors"
                   >
                     Select Test File
                   </button>
                   <button 
                     onClick={handleBatchTest}
                     disabled={!batchFile || isBatchLoading}
-                    className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                    className="px-6 py-2.5 bg-gradient-to-r from-[#238636] to-[#2EA043] hover:from-[#2EA043] hover:to-[#3FB950] shadow-[0_0_15px_rgba(126,231,135,0.2)] hover:shadow-[0_0_25px_rgba(126,231,135,0.4)] text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 flex items-center gap-2"
                   >
                     {isBatchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                     Run Batch Test
                   </button>
                 </div>
                 {batchFile && (
-                  <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+                  <p className="mt-4 text-sm text-slate-600 dark:text-[#8B949E]">
                     Selected: {batchFile.name}
                   </p>
                 )}
                 {batchError && (
-                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg text-sm text-red-600 dark:text-red-400">
+                  <div className="mt-4 p-3 bg-red-50 dark:bg-[#F85149]/10 border border-red-200 dark:border-[#F85149]/30 rounded-lg text-sm text-red-600 dark:text-[#F85149]">
                     {batchError}
                   </div>
                 )}
               </div>
               
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 flex justify-between items-center">
-                  <h3 className="font-semibold text-slate-900 dark:text-white">Batch Test Results</h3>
+              <div className="bg-white dark:bg-[#161B22] border border-slate-200 dark:border-[#21262D] rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-slate-200 dark:border-[#21262D] bg-slate-50 dark:bg-[#0D1117] flex justify-between items-center">
+                  <h3 className="font-semibold text-slate-900 dark:text-[#E6EDF3]">Batch Test Results</h3>
                   {batchResult && (
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                    <span className="text-sm font-medium text-green-600 dark:text-[#7EE787]">
                       Processed {batchResult.processed} / {batchResult.total_rows} rows
                     </span>
                   )}
@@ -481,27 +481,27 @@ export function TestPanel() {
                   {batchResult ? (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Total Rows</div>
-                          <div className="text-2xl font-bold text-slate-900 dark:text-white">{batchResult.total_rows}</div>
+                        <div className="bg-slate-50 dark:bg-[#0D1117] p-4 rounded-lg border border-slate-200 dark:border-[#21262D]">
+                          <div className="text-sm text-slate-500 dark:text-[#8B949E] mb-1">Total Rows</div>
+                          <div className="text-2xl font-bold text-slate-900 dark:text-[#E6EDF3]">{batchResult.total_rows}</div>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Processed</div>
-                          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{batchResult.processed}</div>
+                        <div className="bg-slate-50 dark:bg-[#0D1117] p-4 rounded-lg border border-slate-200 dark:border-[#21262D]">
+                          <div className="text-sm text-slate-500 dark:text-[#8B949E] mb-1">Processed</div>
+                          <div className="text-2xl font-bold text-green-600 dark:text-[#7EE787]">{batchResult.processed}</div>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Not Mfg</div>
+                        <div className="bg-slate-50 dark:bg-[#0D1117] p-4 rounded-lg border border-slate-200 dark:border-[#21262D]">
+                          <div className="text-sm text-slate-500 dark:text-[#8B949E] mb-1">Not Mfg</div>
                           <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{batchResult.not_manufactured}</div>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Flags</div>
-                          <div className="text-2xl font-bold text-red-600 dark:text-red-400">{batchResult.flags.length}</div>
+                        <div className="bg-slate-50 dark:bg-[#0D1117] p-4 rounded-lg border border-slate-200 dark:border-[#21262D]">
+                          <div className="text-sm text-slate-500 dark:text-[#8B949E] mb-1">Flags</div>
+                          <div className="text-2xl font-bold text-red-600 dark:text-[#F85149]">{batchResult.flags.length}</div>
                         </div>
                       </div>
                       
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                          <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-900/50">
+                          <thead className="text-xs text-slate-500 dark:text-[#8B949E] uppercase bg-slate-50 dark:bg-[#0D1117]">
                             <tr>
                               <th className="px-4 py-3">Valve Type</th>
                               <th className="px-4 py-3">Size</th>
@@ -512,8 +512,8 @@ export function TestPanel() {
                           </thead>
                           <tbody>
                             {batchResult.processed_rows.slice(0, 5).map((row: any, idx: number) => (
-                              <tr key={idx} className="border-b border-slate-200 dark:border-slate-700">
-                                <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{row.valveType}</td>
+                              <tr key={idx} className="border-b border-slate-200 dark:border-[#21262D]">
+                                <td className="px-4 py-3 font-medium text-slate-900 dark:text-[#E6EDF3]">{row.valveType}</td>
                                 <td className="px-4 py-3">{row.size}</td>
                                 <td className="px-4 py-3">{row.class}</td>
                                 <td className="px-4 py-3">{row.moc}</td>
@@ -523,14 +523,14 @@ export function TestPanel() {
                           </tbody>
                         </table>
                         {batchResult.processed_rows.length > 5 && (
-                          <div className="text-center py-3 text-sm text-slate-500 dark:text-slate-400">
+                          <div className="text-center py-3 text-sm text-slate-500 dark:text-[#8B949E]">
                             Showing first 5 rows of {batchResult.processed_rows.length}
                           </div>
                         )}
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center text-slate-500 dark:text-slate-400 py-12">
+                    <div className="text-center text-slate-500 dark:text-[#8B949E] py-12">
                       Upload a file to see cell-by-cell comparison.
                     </div>
                   )}

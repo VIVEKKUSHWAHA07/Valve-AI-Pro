@@ -4,7 +4,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // Lazy initialize Supabase client for backend to prevent crashes if .env is missing
 let supabase: SupabaseClient | null = null;
 
-function getSupabase() {
+export function getSupabase() {
   if (!supabase) {
     const SUPABASE_URL = 'https://stqkpgkyvtmvvijilgmc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0cWtwZ2t5dnRtdnZpamlsZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjcyMzYsImV4cCI6MjA5MDI0MzIzNn0.92FxL9YuEwesIb1T-vowKqY1no58a0FKIGwBqlMu-uw';
@@ -423,7 +423,7 @@ export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?:
   if (sb) {
     try {
       const [{ data: catData, error: catError }, { data: rulesData, error: rulesError }] = await Promise.all([
-        sb.from('product_catalogue').select('*'),
+        userId ? sb.from('product_catalogue').select('*').eq('user_id', userId) : Promise.resolve({ data: null, error: null }),
         userId ? sb.from('engine_rules').select('*').eq('user_id', userId) : Promise.resolve({ data: null, error: null })
       ]);
       

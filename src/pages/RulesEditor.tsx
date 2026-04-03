@@ -141,24 +141,28 @@ export function RulesEditor() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not logged in');
 
-      for (const rule of customRules) {
-        // Validate — skip rules with empty conditions or output
-        if (!rule.output_field || !rule.output_value) continue;
-        if (rule.conditions.some(c => !c.field || !c.value)) continue;
+      const validRules = customRules.filter(rule => {
+        if (!rule.rule_name || !rule.output_field || !rule.output_value) return false;
+        if (rule.conditions.length === 0) return false;
+        if (rule.conditions.some(c => !c.field || !c.operator || !c.value)) return false;
+        return true;
+      });
 
-        const { error } = await supabase
-          .from('user_custom_rules')
-          .upsert({
-            id: rule.id,
+      if (validRules.length > 0) {
+        const { error } = await supabase.from('user_custom_rules').upsert(
+          validRules.map(r => ({
+            id: r.id,
             user_id: user.id,
-            rule_name: rule.rule_name,
-            conditions: rule.conditions,
-            output_field: rule.output_field,
-            output_value: rule.output_value,
-            priority: rule.priority,
-            active: rule.active,
+            rule_name: r.rule_name,
+            conditions: r.conditions,
+            output_field: r.output_field,
+            output_value: r.output_value,
+            priority: r.priority,
+            active: r.active,
             updated_at: new Date().toISOString()
-          }, { onConflict: 'id' });
+          })),
+          { onConflict: 'id' }
+        );
 
         if (error) throw error;
       }
@@ -310,28 +314,28 @@ export function RulesEditor() {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div></div>;
+    return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7EE787]"></div></div>;
   }
 
   return (
     <div className="max-w-7xl mx-auto mt-8 px-6 space-y-8 pb-20">
       <button 
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 mb-4"
+        className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-[#E6EDF3] mb-4"
       >
         ← Back
       </button>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-3xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-3">
-            <Settings className="w-8 h-8 text-purple-500" />
+          <h1 className="text-3xl font-display font-bold text-slate-900 dark:text-[#E6EDF3] flex items-center gap-3">
+            <Settings className="w-8 h-8 text-[#7EE787]" />
             Rules Editor
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">Manage engine logic and mappings</p>
+          <p className="text-slate-600 dark:text-[#8B949E] mt-1">Manage engine logic and mappings</p>
         </div>
         <div className="flex items-center gap-4">
           {lastSaved && (
-            <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <div className="text-sm text-slate-500 dark:text-[#8B949E] flex items-center gap-1">
               <Clock className="w-4 h-4" />
               Last saved: {lastSaved.toLocaleTimeString()}
             </div>
@@ -339,7 +343,7 @@ export function RulesEditor() {
           <button 
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-6 py-2.5 rounded-xl font-medium transition-all shadow-sm disabled:opacity-50"
+            className="flex items-center gap-2 bg-gradient-to-r from-[#238636] to-[#2EA043] hover:from-[#2EA043] hover:to-[#3FB950] text-white px-6 py-2.5 rounded-xl font-medium transition-all shadow-[0_0_15px_rgba(126,231,135,0.2)] hover:shadow-[0_0_25px_rgba(126,231,135,0.4)] disabled:opacity-50"
           >
             {saving ? <AlertCircle className="w-5 h-5 animate-pulse" /> : <Save className="w-5 h-5" />}
             {saving ? 'Saving...' : 'Save Changes'}
@@ -347,8 +351,10 @@ export function RulesEditor() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <div className="bg-white dark:bg-[#161B22] rounded-xl border border-slate-200 dark:border-[#21262D] shadow-lg overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-4 h-4 hidden dark:block border-t-2 border-l-2 border-[#7EE787] opacity-40 rounded-tl-xl" />
+        <div className="absolute bottom-0 right-0 w-4 h-4 hidden dark:block border-b-2 border-r-2 border-[#7EE787] opacity-40 rounded-br-xl" />
+        <div className="flex overflow-x-auto border-b border-slate-200 dark:border-[#21262D] bg-slate-50 dark:bg-[#0D1117]">
           {[
             { id: 'aliases', label: 'Valve Type Aliases' },
             { id: 'moc', label: 'MOC Mapping' },
@@ -362,8 +368,8 @@ export function RulesEditor() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors ${
                 activeTab === tab.id
-                  ? 'border-b-2 border-purple-500 text-purple-600 dark:text-purple-400 bg-white dark:bg-slate-800'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                  ? 'border-b-2 border-[#7EE787] text-[#00A8FF] dark:text-[#7EE787] bg-white dark:bg-[#161B22]'
+                  : 'text-slate-600 dark:text-[#8B949E] hover:text-slate-900 dark:hover:text-[#E6EDF3] hover:bg-slate-100 dark:hover:bg-[#21262D]'
               }`}
             >
               {tab.label}
@@ -375,28 +381,28 @@ export function RulesEditor() {
           {activeTab === 'aliases' && (
             <div className="space-y-4">
               <div className="flex justify-end">
-                <button onClick={() => addRow('aliases')} className="flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
+                <button onClick={() => addRow('aliases')} className="flex items-center gap-2 text-sm font-medium text-[#00A8FF] dark:text-[#7EE787] hover:text-[#008DE6] dark:hover:text-[#58A6FF]">
                   <Plus className="w-4 h-4" /> Add Alias
                 </button>
               </div>
-              <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+              <div className="overflow-x-auto border border-slate-200 dark:border-[#21262D] rounded-lg">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-[#0D1117] text-slate-600 dark:text-[#8B949E] font-semibold text-xs uppercase tracking-wider">
                     <tr>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Abbreviation</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Maps To</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Layer</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 text-right">Action</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Abbreviation</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Maps To</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Layer</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D] text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-slate-200 dark:divide-[#21262D] text-slate-700 dark:text-[#E6EDF3]">
                     {aliases.map((alias) => (
-                      <tr key={alias.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="px-4 py-3"><input type="text" value={alias.abbr} onChange={(e) => updateRow('aliases', alias.id, 'abbr', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
-                        <td className="px-4 py-3"><input type="text" value={alias.mapsTo} onChange={(e) => updateRow('aliases', alias.id, 'mapsTo', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
-                        <td className="px-4 py-3"><input type="number" value={alias.layer} onChange={(e) => updateRow('aliases', alias.id, 'layer', parseInt(e.target.value))} className="w-16 bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
+                      <tr key={alias.id} className="hover:bg-slate-50 dark:hover:bg-[rgba(126,231,135,0.04)]">
+                        <td className="px-4 py-3"><input type="text" value={alias.abbr} onChange={(e) => updateRow('aliases', alias.id, 'abbr', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
+                        <td className="px-4 py-3"><input type="text" value={alias.mapsTo} onChange={(e) => updateRow('aliases', alias.id, 'mapsTo', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
+                        <td className="px-4 py-3"><input type="number" value={alias.layer} onChange={(e) => updateRow('aliases', alias.id, 'layer', parseInt(e.target.value))} className="w-16 bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
                         <td className="px-4 py-3 text-right">
-                          <button onClick={() => handleDelete(alias.id, 'aliases')} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(alias.id, 'aliases')} className="text-slate-400 hover:text-red-500 dark:hover:text-[#F85149] transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </td>
                       </tr>
                     ))}
@@ -409,37 +415,37 @@ export function RulesEditor() {
           {activeTab === 'moc' && (
             <div className="space-y-4">
               <div className="flex justify-end">
-                <button onClick={() => addRow('moc')} className="flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
+                <button onClick={() => addRow('moc')} className="flex items-center gap-2 text-sm font-medium text-[#00A8FF] dark:text-[#7EE787] hover:text-[#008DE6] dark:hover:text-[#58A6FF]">
                   <Plus className="w-4 h-4" /> Add MOC Mapping
                 </button>
               </div>
-              <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+              <div className="overflow-x-auto border border-slate-200 dark:border-[#21262D] rounded-lg">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-[#0D1117] text-slate-600 dark:text-[#8B949E] font-semibold text-xs uppercase tracking-wider">
                     <tr>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Customer Writes</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Resolved MOC</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Type</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Flag if &lt;2"</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 text-right">Action</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Customer Writes</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Resolved MOC</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Type</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Flag if &lt;2"</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D] text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-slate-200 dark:divide-[#21262D] text-slate-700 dark:text-[#E6EDF3]">
                     {mocMappings.map((moc) => (
-                      <tr key={moc.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="px-4 py-3"><input type="text" value={moc.customerWrites} onChange={(e) => updateRow('moc', moc.id, 'customerWrites', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
-                        <td className="px-4 py-3"><input type="text" value={moc.resolvedMoc} onChange={(e) => updateRow('moc', moc.id, 'resolvedMoc', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
+                      <tr key={moc.id} className="hover:bg-slate-50 dark:hover:bg-[rgba(126,231,135,0.04)]">
+                        <td className="px-4 py-3"><input type="text" value={moc.customerWrites} onChange={(e) => updateRow('moc', moc.id, 'customerWrites', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
+                        <td className="px-4 py-3"><input type="text" value={moc.resolvedMoc} onChange={(e) => updateRow('moc', moc.id, 'resolvedMoc', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
                         <td className="px-4 py-3">
-                          <select value={moc.type} onChange={(e) => updateRow('moc', moc.id, 'type', e.target.value)} className="bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white dark:bg-slate-800">
+                          <select value={moc.type} onChange={(e) => updateRow('moc', moc.id, 'type', e.target.value)} className="bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3] dark:bg-[#0D1117]">
                             <option value="Forged">Forged</option>
                             <option value="Cast">Cast</option>
                           </select>
                         </td>
                         <td className="px-4 py-3">
-                          <input type="checkbox" checked={moc.flagIfSmall} onChange={(e) => updateRow('moc', moc.id, 'flagIfSmall', e.target.checked)} className="rounded border-slate-300 text-purple-600 focus:ring-purple-500" />
+                          <input type="checkbox" checked={moc.flagIfSmall} onChange={(e) => updateRow('moc', moc.id, 'flagIfSmall', e.target.checked)} className="rounded border-slate-300 dark:border-[#21262D] dark:bg-[#0D1117] text-[#7EE787] focus:ring-[#7EE787]" />
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button onClick={() => handleDelete(moc.id, 'moc')} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(moc.id, 'moc')} className="text-slate-400 hover:text-red-500 dark:hover:text-[#F85149] transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </td>
                       </tr>
                     ))}
@@ -452,30 +458,30 @@ export function RulesEditor() {
           {activeTab === 'trim' && (
             <div className="space-y-4">
               <div className="flex justify-end">
-                <button onClick={() => addRow('trim')} className="flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
+                <button onClick={() => addRow('trim')} className="flex items-center gap-2 text-sm font-medium text-[#00A8FF] dark:text-[#7EE787] hover:text-[#008DE6] dark:hover:text-[#58A6FF]">
                   <Plus className="w-4 h-4" /> Add Trim Row
                 </button>
               </div>
-              <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+              <div className="overflow-x-auto border border-slate-200 dark:border-[#21262D] rounded-lg">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-[#0D1117] text-slate-600 dark:text-[#8B949E] font-semibold text-xs uppercase tracking-wider">
                     <tr>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Trim Code / Material</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Without Stellite (col_wo)</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">With Stellite on Seat (col_ss)</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Stellite on Seat+Wedge (col_ssw)</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 text-right">Action</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Trim Code / Material</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Without Stellite (col_wo)</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">With Stellite on Seat (col_ss)</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Stellite on Seat+Wedge (col_ssw)</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D] text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-slate-200 dark:divide-[#21262D] text-slate-700 dark:text-[#E6EDF3]">
                     {trimTable.map((trim) => (
-                      <tr key={trim.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="px-4 py-3"><input type="text" value={trim.code} onChange={(e) => updateRow('trim', trim.id, 'code', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
-                        <td className="px-4 py-3"><input type="text" value={trim.wo} onChange={(e) => updateRow('trim', trim.id, 'wo', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
-                        <td className="px-4 py-3"><input type="text" value={trim.ss} onChange={(e) => updateRow('trim', trim.id, 'ss', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
-                        <td className="px-4 py-3"><input type="text" value={trim.ssw} onChange={(e) => updateRow('trim', trim.id, 'ssw', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
+                      <tr key={trim.id} className="hover:bg-slate-50 dark:hover:bg-[rgba(126,231,135,0.04)]">
+                        <td className="px-4 py-3"><input type="text" value={trim.code} onChange={(e) => updateRow('trim', trim.id, 'code', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
+                        <td className="px-4 py-3"><input type="text" value={trim.wo} onChange={(e) => updateRow('trim', trim.id, 'wo', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
+                        <td className="px-4 py-3"><input type="text" value={trim.ss} onChange={(e) => updateRow('trim', trim.id, 'ss', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
+                        <td className="px-4 py-3"><input type="text" value={trim.ssw} onChange={(e) => updateRow('trim', trim.id, 'ssw', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
                         <td className="px-4 py-3 text-right">
-                          <button onClick={() => handleDelete(trim.id, 'trim')} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(trim.id, 'trim')} className="text-slate-400 hover:text-red-500 dark:hover:text-[#F85149] transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </td>
                       </tr>
                     ))}
@@ -488,30 +494,30 @@ export function RulesEditor() {
           {activeTab === 'operator' && (
             <div className="space-y-4">
               <div className="flex justify-end">
-                <button onClick={() => addRow('operator')} className="flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
+                <button onClick={() => addRow('operator')} className="flex items-center gap-2 text-sm font-medium text-[#00A8FF] dark:text-[#7EE787] hover:text-[#008DE6] dark:hover:text-[#58A6FF]">
                   <Plus className="w-4 h-4" /> Add Threshold
                 </button>
               </div>
-              <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+              <div className="overflow-x-auto border border-slate-200 dark:border-[#21262D] rounded-lg">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-[#0D1117] text-slate-600 dark:text-[#8B949E] font-semibold text-xs uppercase tracking-wider">
                     <tr>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Valve Category</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Class</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Gear Threshold (inches)</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Below Threshold</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 text-right">Action</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Valve Category</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Class</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Gear Threshold (inches)</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Below Threshold</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D] text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-slate-200 dark:divide-[#21262D] text-slate-700 dark:text-[#E6EDF3]">
                     {operatorThresholds.map((op) => (
-                      <tr key={op.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="px-4 py-3"><input type="text" value={op.category} onChange={(e) => updateRow('operator', op.id, 'category', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
-                        <td className="px-4 py-3"><input type="text" value={op.class} onChange={(e) => updateRow('operator', op.id, 'class', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
-                        <td className="px-4 py-3"><input type="text" value={op.threshold} onChange={(e) => updateRow('operator', op.id, 'threshold', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
-                        <td className="px-4 py-3"><input type="text" value={op.below} onChange={(e) => updateRow('operator', op.id, 'below', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
+                      <tr key={op.id} className="hover:bg-slate-50 dark:hover:bg-[rgba(126,231,135,0.04)]">
+                        <td className="px-4 py-3"><input type="text" value={op.category} onChange={(e) => updateRow('operator', op.id, 'category', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
+                        <td className="px-4 py-3"><input type="text" value={op.class} onChange={(e) => updateRow('operator', op.id, 'class', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
+                        <td className="px-4 py-3"><input type="text" value={op.threshold} onChange={(e) => updateRow('operator', op.id, 'threshold', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
+                        <td className="px-4 py-3"><input type="text" value={op.below} onChange={(e) => updateRow('operator', op.id, 'below', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
                         <td className="px-4 py-3 text-right">
-                          <button onClick={() => handleDelete(op.id, 'operator')} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(op.id, 'operator')} className="text-slate-400 hover:text-red-500 dark:hover:text-[#F85149] transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </td>
                       </tr>
                     ))}
@@ -524,30 +530,30 @@ export function RulesEditor() {
           {activeTab === 'notmfg' && (
             <div className="space-y-4">
               <div className="flex justify-end">
-                <button onClick={() => addRow('notmfg')} className="flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
+                <button onClick={() => addRow('notmfg')} className="flex items-center gap-2 text-sm font-medium text-[#00A8FF] dark:text-[#7EE787] hover:text-[#008DE6] dark:hover:text-[#58A6FF]">
                   <Plus className="w-4 h-4" /> Add Not-Manufactured Type
                 </button>
               </div>
-              <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+              <div className="overflow-x-auto border border-slate-200 dark:border-[#21262D] rounded-lg">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-[#0D1117] text-slate-600 dark:text-[#8B949E] font-semibold text-xs uppercase tracking-wider">
                     <tr>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Type Key</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Display Label</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">Active</th>
-                      <th className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 text-right">Action</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Type Key</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Display Label</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Active</th>
+                      <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D] text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-slate-200 dark:divide-[#21262D] text-slate-700 dark:text-[#E6EDF3]">
                     {notMfg.map((type) => (
-                      <tr key={type.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="px-4 py-3"><input type="text" value={type.key} onChange={(e) => updateRow('notmfg', type.id, 'key', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
-                        <td className="px-4 py-3"><input type="text" value={type.label} onChange={(e) => updateRow('notmfg', type.id, 'label', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-white" /></td>
+                      <tr key={type.id} className="hover:bg-slate-50 dark:hover:bg-[rgba(126,231,135,0.04)]">
+                        <td className="px-4 py-3"><input type="text" value={type.key} onChange={(e) => updateRow('notmfg', type.id, 'key', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
+                        <td className="px-4 py-3"><input type="text" value={type.label} onChange={(e) => updateRow('notmfg', type.id, 'label', e.target.value)} className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm dark:text-[#E6EDF3]" /></td>
                         <td className="px-4 py-3">
-                          <input type="checkbox" checked={type.active} onChange={(e) => updateRow('notmfg', type.id, 'active', e.target.checked)} className="rounded border-slate-300 text-purple-600 focus:ring-purple-500" />
+                          <input type="checkbox" checked={type.active} onChange={(e) => updateRow('notmfg', type.id, 'active', e.target.checked)} className="rounded border-slate-300 dark:border-[#21262D] dark:bg-[#0D1117] text-[#7EE787] focus:ring-[#7EE787]" />
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button onClick={() => handleDelete(type.id, 'notmfg')} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(type.id, 'notmfg')} className="text-slate-400 hover:text-red-500 dark:hover:text-[#F85149] transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </td>
                       </tr>
                     ))}
@@ -562,19 +568,19 @@ export function RulesEditor() {
 
               {/* Header */}
               <div className="flex justify-between items-center">
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-500 dark:text-[#8B949E]">
                   Rules are applied in priority order. They override default engine output for matching rows only.
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={addCustomRule}
-                    className="flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700"
+                    className="flex items-center gap-2 text-sm font-medium text-[#00A8FF] dark:text-[#7EE787] hover:text-[#008DE6] dark:hover:text-[#58A6FF]"
                   >
                     <Plus className="w-4 h-4" /> Add Rule
                   </button>
                   <button
                     onClick={saveCustomRules}
-                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                    className="flex items-center gap-2 bg-gradient-to-r from-[#238636] to-[#2EA043] hover:from-[#2EA043] hover:to-[#3FB950] text-white px-4 py-2 rounded-lg text-sm font-medium shadow-[0_0_15px_rgba(126,231,135,0.2)] hover:shadow-[0_0_25px_rgba(126,231,135,0.4)]"
                   >
                     <Save className="w-4 h-4" /> Save All Rules
                   </button>
@@ -583,13 +589,13 @@ export function RulesEditor() {
 
               {/* Rule Cards */}
               {customRules.length === 0 && (
-                <div className="text-center py-12 text-slate-400 dark:text-slate-500 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                <div className="text-center py-12 text-slate-400 dark:text-[#8B949E] border-2 border-dashed border-slate-200 dark:border-[#21262D] rounded-xl">
                   No custom rules yet. Click "Add Rule" to create your first rule.
                 </div>
               )}
 
               {customRules.map((rule, ruleIdx) => (
-                <div key={rule.id} className={`border rounded-xl p-5 space-y-4 ${rule.active ? 'border-purple-200 dark:border-purple-800 bg-purple-50/30 dark:bg-purple-900/10' : 'border-slate-200 dark:border-slate-700 opacity-60'}`}>
+                <div key={rule.id} className={`border rounded-xl p-5 space-y-4 ${rule.active ? 'border-[#7EE787]/30 dark:border-[#7EE787]/30 bg-[#7EE787]/5 dark:bg-[#7EE787]/10' : 'border-slate-200 dark:border-[#21262D] opacity-60'}`}>
 
                   {/* Rule header */}
                   <div className="flex items-center gap-3 flex-wrap">
@@ -597,38 +603,38 @@ export function RulesEditor() {
                       type="text"
                       value={rule.rule_name}
                       onChange={e => setCustomRules(customRules.map((r, i) => i === ruleIdx ? { ...r, rule_name: e.target.value } : r))}
-                      className="flex-1 font-semibold text-slate-900 dark:text-white bg-transparent border-b border-slate-300 dark:border-slate-600 focus:outline-none focus:border-purple-500 text-sm py-1"
+                      className="flex-1 font-semibold text-slate-900 dark:text-[#E6EDF3] bg-transparent border-b border-slate-300 dark:border-[#21262D] focus:outline-none focus:border-[#7EE787] text-sm py-1"
                       placeholder="Rule name..."
                     />
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-[#8B949E]">
                       Priority:
                       <input
                         type="number"
                         value={rule.priority}
                         onChange={e => setCustomRules(customRules.map((r, i) => i === ruleIdx ? { ...r, priority: parseInt(e.target.value) || 1 } : r))}
-                        className="w-12 text-center bg-slate-100 dark:bg-slate-700 rounded px-1 py-0.5 text-xs"
+                        className="w-12 text-center bg-slate-100 dark:bg-[#0D1117] dark:text-[#E6EDF3] rounded px-1 py-0.5 text-xs border border-transparent dark:border-[#21262D]"
                       />
                     </div>
-                    <label className="flex items-center gap-1 text-xs text-slate-500 cursor-pointer">
+                    <label className="flex items-center gap-1 text-xs text-slate-500 dark:text-[#8B949E] cursor-pointer">
                       <input
                         type="checkbox"
                         checked={rule.active}
                         onChange={e => setCustomRules(customRules.map((r, i) => i === ruleIdx ? { ...r, active: e.target.checked } : r))}
-                        className="rounded"
+                        className="rounded border-slate-300 dark:border-[#21262D] dark:bg-[#0D1117] text-[#7EE787] focus:ring-[#7EE787]"
                       />
                       Active
                     </label>
-                    <button onClick={() => deleteCustomRule(rule.id)} className="text-slate-400 hover:text-red-500">
+                    <button onClick={() => deleteCustomRule(rule.id)} className="text-slate-400 hover:text-red-500 dark:hover:text-[#F85149]">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
 
                   {/* IF Conditions */}
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">IF</div>
+                    <div className="text-xs font-semibold text-slate-500 dark:text-[#8B949E] uppercase tracking-wider">IF</div>
                     {rule.conditions.map((cond, condIdx) => (
                       <div key={condIdx} className="flex items-center gap-2 flex-wrap">
-                        {condIdx > 0 && <span className="text-xs font-bold text-purple-500 w-8">AND</span>}
+                        {condIdx > 0 && <span className="text-xs font-bold text-[#7EE787] w-8">AND</span>}
                         {condIdx === 0 && <span className="w-8" />}
 
                         <select
@@ -637,7 +643,7 @@ export function RulesEditor() {
                             const updated = rule.conditions.map((c, ci) => ci === condIdx ? { ...c, field: e.target.value } : c);
                             setCustomRules(customRules.map((r, i) => i === ruleIdx ? { ...r, conditions: updated } : r));
                           }}
-                          className="bg-slate-100 dark:bg-slate-700 border-none rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200"
+                          className="bg-slate-100 dark:bg-[#0D1117] border border-transparent dark:border-[#21262D] rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-[#E6EDF3]"
                         >
                           <option value="valve_type">Valve Type</option>
                           <option value="size">Size (inches)</option>
@@ -653,7 +659,7 @@ export function RulesEditor() {
                             const updated = rule.conditions.map((c, ci) => ci === condIdx ? { ...c, operator: e.target.value } : c);
                             setCustomRules(customRules.map((r, i) => i === ruleIdx ? { ...r, conditions: updated } : r));
                           }}
-                          className="bg-slate-100 dark:bg-slate-700 border-none rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200"
+                          className="bg-slate-100 dark:bg-[#0D1117] border border-transparent dark:border-[#21262D] rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-[#E6EDF3]"
                         >
                           <option value="equals">equals</option>
                           <option value="not_equals">not equals</option>
@@ -670,7 +676,7 @@ export function RulesEditor() {
                             setCustomRules(customRules.map((r, i) => i === ruleIdx ? { ...r, conditions: updated } : r));
                           }}
                           placeholder="value..."
-                          className="flex-1 min-w-[100px] bg-slate-100 dark:bg-slate-700 border-none rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-purple-500"
+                          className="flex-1 min-w-[100px] bg-slate-100 dark:bg-[#0D1117] border border-transparent dark:border-[#21262D] rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-[#E6EDF3] focus:ring-1 focus:ring-[#7EE787]"
                         />
 
                         <button
@@ -678,7 +684,7 @@ export function RulesEditor() {
                             const updated = rule.conditions.filter((_, ci) => ci !== condIdx);
                             setCustomRules(customRules.map((r, i) => i === ruleIdx ? { ...r, conditions: updated } : r));
                           }}
-                          className="text-slate-400 hover:text-red-500"
+                          className="text-slate-400 hover:text-red-500 dark:hover:text-[#F85149]"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -690,7 +696,7 @@ export function RulesEditor() {
                         const updated = [...rule.conditions, { field: 'valve_type', operator: 'equals', value: '' }];
                         setCustomRules(customRules.map((r, i) => i === ruleIdx ? { ...r, conditions: updated } : r));
                       }}
-                      className="text-xs text-purple-500 hover:text-purple-600 flex items-center gap-1 ml-8 mt-1"
+                      className="text-xs text-[#00A8FF] dark:text-[#7EE787] hover:text-[#008DE6] dark:hover:text-[#58A6FF] flex items-center gap-1 ml-8 mt-1"
                     >
                       <Plus className="w-3 h-3" /> Add Condition
                     </button>
@@ -698,12 +704,12 @@ export function RulesEditor() {
 
                   {/* THEN Output */}
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">THEN</div>
+                    <div className="text-xs font-semibold text-slate-500 dark:text-[#8B949E] uppercase tracking-wider">THEN</div>
                     <div className="flex items-center gap-2 flex-wrap ml-8">
                       <select
                         value={rule.output_field}
                         onChange={e => setCustomRules(customRules.map((r, i) => i === ruleIdx ? { ...r, output_field: e.target.value } : r))}
-                        className="bg-slate-100 dark:bg-slate-700 border-none rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200"
+                        className="bg-slate-100 dark:bg-[#0D1117] border border-transparent dark:border-[#21262D] rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-[#E6EDF3]"
                       >
                         <option value="operator">Operator</option>
                         <option value="model">Model</option>
@@ -713,13 +719,13 @@ export function RulesEditor() {
                         <option value="packing">Packing</option>
                         <option value="bolting">Bolting</option>
                       </select>
-                      <span className="text-sm text-slate-400">=</span>
+                      <span className="text-sm text-slate-400 dark:text-[#8B949E]">=</span>
                       <input
                         type="text"
                         value={rule.output_value}
                         onChange={e => setCustomRules(customRules.map((r, i) => i === ruleIdx ? { ...r, output_value: e.target.value } : r))}
                         placeholder="output value..."
-                        className="flex-1 min-w-[150px] bg-slate-100 dark:bg-slate-700 border-none rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-purple-500"
+                        className="flex-1 min-w-[150px] bg-slate-100 dark:bg-[#0D1117] border border-transparent dark:border-[#21262D] rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-[#E6EDF3] focus:ring-1 focus:ring-[#7EE787]"
                       />
                     </div>
                   </div>
@@ -728,22 +734,22 @@ export function RulesEditor() {
               ))}
 
               {/* ── TEST PANEL ── */}
-              <div className="mt-8 border border-slate-200 dark:border-slate-700 rounded-xl p-6 space-y-4">
-                <h3 className="font-semibold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+              <div className="mt-8 border border-slate-200 dark:border-[#21262D] rounded-xl p-6 space-y-4">
+                <h3 className="font-semibold text-slate-900 dark:text-[#E6EDF3] text-sm flex items-center gap-2">
                   🧪 Test Custom Rules
                 </h3>
-                <p className="text-xs text-slate-500">Fill in the fields below and click Run Test to see which rules match.</p>
+                <p className="text-xs text-slate-500 dark:text-[#8B949E]">Fill in the fields below and click Run Test to see which rules match.</p>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {['valve_type', 'size', 'class', 'moc', 'end_type', 'trim'].map(field => (
                     <div key={field}>
-                      <label className="text-xs text-slate-500 capitalize mb-1 block">{field.replace('_', ' ')}</label>
+                      <label className="text-xs text-slate-500 dark:text-[#8B949E] capitalize mb-1 block">{field.replace('_', ' ')}</label>
                       <input
                         type="text"
                         value={testInput[field as keyof TestInput]}
                         onChange={e => setTestInput({ ...testInput, [field]: e.target.value })}
                         placeholder={field === 'valve_type' ? 'e.g. Gate Valve' : field === 'size' ? 'e.g. 6' : field === 'class' ? 'e.g. 150' : ''}
-                        className="w-full bg-slate-100 dark:bg-slate-700 border-none rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-purple-500"
+                        className="w-full bg-slate-100 dark:bg-[#0D1117] border border-transparent dark:border-[#21262D] rounded-lg px-3 py-1.5 text-sm text-slate-700 dark:text-[#E6EDF3] focus:ring-1 focus:ring-[#7EE787]"
                       />
                     </div>
                   ))}
@@ -751,7 +757,7 @@ export function RulesEditor() {
 
                 <button
                   onClick={runTest}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm font-medium"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#238636] to-[#2EA043] hover:from-[#2EA043] hover:to-[#3FB950] text-white px-5 py-2 rounded-lg text-sm font-medium shadow-[0_0_15px_rgba(126,231,135,0.2)] hover:shadow-[0_0_25px_rgba(126,231,135,0.4)]"
                 >
                   ▶ Run Test
                 </button>
@@ -759,7 +765,7 @@ export function RulesEditor() {
                 {testOutput.length > 0 && (
                   <div className="space-y-2 mt-3">
                     {testOutput.map((line, i) => (
-                      <div key={i} className={`text-sm px-4 py-2 rounded-lg font-mono ${line.startsWith('✅') ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                      <div key={i} className={`text-sm px-4 py-2 rounded-lg font-mono ${line.startsWith('✅') ? 'bg-green-50 dark:bg-[rgba(126,231,135,0.1)] text-green-700 dark:text-[#7EE787] border border-transparent dark:border-[#7EE787]/20' : 'bg-slate-100 dark:bg-[#0D1117] text-slate-500 dark:text-[#8B949E] border border-transparent dark:border-[#21262D]'}`}>
                         {line}
                       </div>
                     ))}

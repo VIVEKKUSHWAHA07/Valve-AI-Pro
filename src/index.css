@@ -20,13 +20,13 @@
   }
 
   .dark {
-    --bg-color: #050B14;
-    --text-color: #e2e8f0;
-    --scrollbar-track: #050B14;
-    --scrollbar-thumb: #1e293b;
-    --scrollbar-thumb-hover: #334155;
-    --selection-bg: rgba(0, 168, 255, 0.3);
-    --selection-text: #ffffff;
+    --bg-color: #0D0D0D;
+    --text-color: #E6EDF3;
+    --scrollbar-track: #0D0D0D;
+    --scrollbar-thumb: #21262D;
+    --scrollbar-thumb-hover: #30363D;
+    --selection-bg: rgba(126, 231, 135, 0.3);
+    --selection-text: #E6EDF3;
   }
 }
 
@@ -43,8 +43,8 @@ body {
 
 .dark body {
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(0, 168, 255, 0.05), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(0, 168, 255, 0.08), transparent 25%);
+    radial-gradient(circle at 15% 50%, rgba(126, 231, 135, 0.03), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(126, 231, 135, 0.05), transparent 25%);
   background-attachment: fixed;
 }
 

@@ -3,7 +3,9 @@ import cors from 'cors';
 import multer from 'multer';
 import { createServer as createViteServer } from 'vite';
 import * as path from 'path';
-import { processRFQ, processSingleRow, generateTrace, generateFuzzyMatches } from './backend/engine';
+import { processRFQ, processSingleRow, generateTrace, generateFuzzyMatches, getSupabase } from './backend/engine';
+import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 const app = express();
 const PORT = 3000;
@@ -12,6 +14,81 @@ app.use(cors());
 app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/catalogue/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const userId = req.body.userId;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const xlsx = require('xlsx');
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(sheet, { defval: '' }) as any[];
+
+    if (data.length === 0) {
+      return res.status(400).json({ error: 'Excel file is empty' });
+    }
+
+    const sb = getSupabase();
+    if (!sb) {
+      return res.status(500).json({ error: 'Database connection failed' });
+    }
+
+    // Delete existing catalogue for this user
+    await sb.from('product_catalogue').delete().eq('user_id', userId);
+
+    // Prepare new products
+    const products = data.map(row => {
+      // Find columns dynamically (case-insensitive)
+      const getCol = (names: string[]) => {
+        const key = Object.keys(row).find(k => names.some(n => k.toLowerCase().includes(n)));
+        return key ? String(row[key] || '') : '';
+      };
+
+      return {
+        user_id: userId,
+        part_number: getCol(['part', 'item', 'code']) || 'UNKNOWN',
+        description: getCol(['desc', 'particular']) || '',
+        category: getCol(['category', 'family']) || '',
+        type: getCol(['type', 'valve']) || '',
+        size: getCol(['size', 'nps', 'dn']) || '',
+        rating: getCol(['rating', 'class', 'pressure']) || '',
+        moc: getCol(['moc', 'material', 'body']) || '',
+        trim: getCol(['trim', 'seat']) || '',
+        end_detail: getCol(['end', 'connection']) || ''
+      };
+    });
+
+    // Insert in batches of 1000
+    const batchSize = 1000;
+    for (let i = 0; i < products.length; i += batchSize) {
+      const batch = products.slice(i, i + batchSize);
+      const { error } = await sb.from('product_catalogue').insert(batch);
+      if (error) throw error;
+    }
+
+    // Update version history
+    const { error: vError } = await sb.from('catalogue_versions').insert({
+      user_id: userId,
+      filename: req.file.originalname,
+      row_count: products.length
+    });
+
+    if (vError) throw vError;
+
+    res.json({ success: true, count: products.length });
+  } catch (error: any) {
+    console.error('Error uploading catalogue:', error);
+    res.status(500).json({ error: error.message || 'Failed to upload catalogue' });
+  }
+});
 
 app.post('/api/upload-rfq', upload.single('file'), async (req, res) => {
   try {
@@ -63,6 +140,75 @@ app.post('/api/extract-headers', upload.single('file'), (req, res) => {
   } catch (error: any) {
     console.error('Error extracting headers:', error);
     res.status(500).json({ error: error.message || 'Failed to extract headers' });
+  }
+});
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://stqkpgkyvtmvvijilgmc.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0cWtwZ2t5dnRtdnZpamlsZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjcyMzYsImV4cCI6MjA5MDI0MzIzNn0.92FxL9YuEwesIb1T-vowKqY1no58a0FKIGwBqlMu-uw'; // Fallback to anon key if service role key is missing
+
+const getSupabaseAdmin = () => {
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+};
+
+const bootstrapAdmin = async () => {
+  try {
+    const sb = getSupabaseAdmin();
+    const { data: { users } } = await sb.auth.admin.listUsers();
+    const adminUser = users.find(u => u.email === 'forai0707@gmail.com');
+    
+    if (adminUser) {
+      await sb.from('app_access').upsert({
+        email: 'forai0707@gmail.com',
+        active: true,
+        plan: 'custom'
+      }, { onConflict: 'email' });
+      
+      await sb.from('admins').upsert({
+        user_id: adminUser.id
+      }, { onConflict: 'user_id' });
+      
+      console.log('Successfully bootstrapped admin forai0707@gmail.com');
+    } else {
+      console.log('User forai0707@gmail.com not found in auth yet. Please sign up first.');
+    }
+  } catch (err) {
+    console.error('Failed to bootstrap admin:', err);
+  }
+};
+bootstrapAdmin();
+
+app.post('/api/admin/confirm-email', async (req, res) => {
+  const { email, adminUserId } = req.body;
+  try {
+    const sb = getSupabaseAdmin(); // service role client
+
+    // Verify admin
+    const { data: admin } = await sb
+      .from('admins')
+      .select('*')
+      .eq('user_id', adminUserId)
+      .single();
+    if (!admin) {
+      return res.status(403).json({ 
+        error: 'Not authorized' 
+      });
+    }
+
+    // Find user and confirm email using admin API
+    const { data: { users } } = await sb.auth.admin
+      .listUsers();
+    const targetUser = users.find(u => u.email === email);
+    
+    if (targetUser) {
+      await sb.auth.admin.updateUserById(
+        targetUser.id,
+        { email_confirm: true }
+      );
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
