@@ -3,7 +3,8 @@ import cors from 'cors';
 import multer from 'multer';
 import { createServer as createViteServer } from 'vite';
 import * as path from 'path';
-import { processRFQ, processSingleRow, generateTrace, generateFuzzyMatches, getSupabase, fetchUserContext } from './backend/engine';
+import * as xlsx from 'xlsx';
+import { processRFQ, processSingleRow, generateTrace, generateFuzzyMatches, getSupabase, fetchUserContext, detectColumns } from './backend/engine';
 import { createClient, User } from '@supabase/supabase-js';
 
 const app = express();
@@ -25,7 +26,6 @@ app.post('/api/catalogue/upload', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    const xlsx = require('xlsx');
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -113,7 +113,6 @@ app.post('/api/extract-headers', upload.single('file'), (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
     
-    const xlsx = require('xlsx');
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -132,7 +131,6 @@ app.post('/api/extract-headers', upload.single('file'), (req, res) => {
     const headers = data[headerRowIndex] as string[];
     
     // Auto-detect columns
-    const { detectColumns } = require('./backend/engine');
     const detectedMap = detectColumns(headers);
     
     res.json({ headers, headerRowIndex, columnMap: detectedMap });

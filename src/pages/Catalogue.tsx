@@ -347,7 +347,7 @@ export function Catalogue() {
 
 const CategoryCard: React.FC<{ category: string, items: CatalogueItem[], onUpdate: () => Promise<void> | void, showToast: (msg: string, type?: 'success'|'error') => void, onDeleteCategory: () => void }> = ({ category, items, onUpdate, showToast, onDeleteCategory }) => {
   const { user } = useAuth();
-  const [collapsed, setCollapsed] = useState(items.length > 50);
+  const [collapsed, setCollapsed] = useState(true);
   const [newItemValue, setNewItemValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
