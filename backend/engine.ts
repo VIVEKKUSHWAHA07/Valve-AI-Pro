@@ -1,6 +1,7 @@
 import * as xlsx from 'xlsx';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { matchAgainstCatalogue } from './catalogueMatcher';
+import { ALIAS_MAP } from './aliasMap';
 
 // Lazy initialize Supabase client for backend to prevent crashes if .env is missing
 let supabase: SupabaseClient | null = null;
@@ -716,6 +717,11 @@ export async function fetchUserContext(userId?: string) {
             }
           }
         }
+        
+        // Also update the new ALIAS_MAP
+        if (mapsTo.toLowerCase().includes('valve')) {
+          ALIAS_MAP.valve_type[abbr.toLowerCase()] = mapsTo;
+        }
       }
 
       // Merge MOC rules
@@ -736,6 +742,9 @@ export async function fetchUserContext(userId?: string) {
         if (!MOC_ALIASES[key].includes(customerWrites.toUpperCase())) {
           MOC_ALIASES[key].push(customerWrites.toUpperCase());
         }
+        
+        // Also update the new ALIAS_MAP
+        ALIAS_MAP.moc[customerWrites.toLowerCase()] = resolvedMoc;
       }
 
       // Merge Not Mfg rules
@@ -860,15 +869,25 @@ export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?:
     }
   }
 
+  if (customColumnMap) {
+    isSingleColumn = false;
+    if (headerRowIndex === -1) {
+      for (let i = 0; i < Math.min(10, data.length); i++) {
+        const nonEmpty = data[i].filter(c => c && String(c).trim()).length;
+        if (nonEmpty >= 3) { headerRowIndex = i; break; }
+      }
+    }
+  }
+
   const dataRows = isSingleColumn ? data : data.slice(headerRowIndex + 1);
   const headers = isSingleColumn ? [] : (data[headerRowIndex] as any[]);
-  const columnMap = isSingleColumn ? {} : (customColumnMap || detectColumns(headers));
+  const columnMap = customColumnMap || (isSingleColumn ? {} : detectColumns(headers));
 
-  const isMultiColumn = headers.length >= 3 &&
+  const isMultiColumn = customColumnMap ? true : (headers.length >= 3 &&
     headers.some(h => /size|dn|nps/i.test(String(h))) &&
-    headers.some(h => /class|rating|pressure/i.test(String(h)));
+    headers.some(h => /class|rating|pressure/i.test(String(h))));
 
-  const isParagraphMode = isSingleColumn || !isMultiColumn;
+  const isParagraphMode = customColumnMap ? false : (isSingleColumn || !isMultiColumn);
 
   // Fetch product catalogue and rules
   const { catalogue, catalogueCount, notMfgList, userCustomRules } = await fetchUserContext(userId);

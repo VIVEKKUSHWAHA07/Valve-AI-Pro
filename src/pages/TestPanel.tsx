@@ -34,7 +34,15 @@ export function TestPanel() {
       });
       
       const data = await response.json();
+      console.log('Engine response raw:', data);
+      
       if (!response.ok) throw new Error(data.error || 'Failed to run test');
+      
+      if (!data || !data.result) {
+        console.error('Invalid engine response:', data);
+        setSingleError('Engine returned invalid response');
+        return;
+      }
       
       setSingleResult(data.result);
     } catch (err: any) {
@@ -283,26 +291,26 @@ export function TestPanel() {
                     {singleResult ? (
                       <>
                         {[
-                          { label: 'Valve Type', value: singleResult.processedRow.valveType },
-                          { label: 'Size', value: singleResult.processedRow.size },
-                          { label: 'Class', value: singleResult.processedRow.class },
-                          { label: 'Standard', value: singleResult.processedRow.standard },
-                          { label: 'Model', value: singleResult.processedRow.model },
-                          { label: 'MOC', value: singleResult.processedRow.moc },
-                          { label: 'Trim', value: singleResult.processedRow.trim },
-                          { label: 'Gasket', value: singleResult.processedRow.gasket },
-                          { label: 'Packing', value: singleResult.processedRow.packing },
-                          { label: 'Operator', value: singleResult.processedRow.operator },
-                          { label: 'End Detail', value: singleResult.processedRow.endDetail },
-                          { label: 'Bolting', value: singleResult.processedRow.bolting },
+                          { label: 'Valve Type', value: singleResult?.valveType ?? '-', matchInfo: singleResult?.valveType_match_info ?? 'Unknown' },
+                          { label: 'Size', value: singleResult?.size ?? '-', matchInfo: singleResult?.size_match_info ?? 'Unknown' },
+                          { label: 'Class', value: singleResult?.pressureClass ?? '-', matchInfo: singleResult?.pressureClass_match_info ?? 'Unknown' },
+                          { label: 'Standard', value: singleResult?.standard ?? '-', matchInfo: singleResult?.standard_match_info ?? 'Unknown' },
+                          { label: 'Model', value: singleResult?.model ?? '-', matchInfo: singleResult?.valveType_match_info ?? 'Unknown' }, // Model uses valveType match info
+                          { label: 'MOC', value: singleResult?.moc ?? '-', matchInfo: singleResult?.moc_match_info ?? 'Unknown' },
+                          { label: 'Trim', value: singleResult?.trim ?? '-', matchInfo: singleResult?.trim_match_info ?? 'Unknown' },
+                          { label: 'Gasket', value: singleResult?.gasket ?? '-', matchInfo: 'Rule 8 — Gasket' },
+                          { label: 'Packing', value: singleResult?.packing ?? '-', matchInfo: 'Rule 9 — Packing' },
+                          { label: 'Operator', value: singleResult?.operator ?? '-', matchInfo: 'Rule 10 — Operator' },
+                          { label: 'End Detail', value: singleResult?.endDetail ?? '-', matchInfo: singleResult?.endType_match_info ?? 'Unknown' },
+                          { label: 'Bolting', value: singleResult?.bolting ?? '-', matchInfo: 'Rule 12 — Bolting' },
                         ].map((item, idx) => (
                           <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-200 dark:border-[#21262D] last:border-0">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-slate-500 dark:text-[#8B949E] w-24">{item.label}</span>
-                              <span className="text-sm font-semibold text-slate-900 dark:text-[#E6EDF3]">{item.value || '-'}</span>
+                              <span className="text-sm font-semibold text-slate-900 dark:text-[#E6EDF3]">{item.value}</span>
                             </div>
                             <span className="text-xs text-[#7EE787] dark:text-[#7EE787] mt-1 sm:mt-0 bg-green-50 dark:bg-[rgba(126,231,135,0.1)] px-2 py-1 rounded">
-                              {singleResult.processedRow.match_info || 'Unmatched'}
+                              {item.matchInfo}
                             </span>
                           </div>
                         ))}

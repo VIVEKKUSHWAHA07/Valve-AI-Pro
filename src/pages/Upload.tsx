@@ -13,6 +13,59 @@ export function Upload() {
   
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [columnMap, setColumnMap] = useState<Record<string, number>>({});
+  const [mappingConfirmed, setMappingConfirmed] = useState(false);
+
+  const REQUIRED_FIELDS = [
+    { id: 'desc', label: 'Description' },
+    { id: 'size', label: 'Size' },
+    { id: 'rating', label: 'Rating/Class' },
+    { id: 'body', label: 'Body MOC' },
+    { id: 'endType', label: 'End Type' },
+    { id: 'trim', label: 'Trim' }
+  ];
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    
+    setFile(selectedFile);
+    setResult(null);
+    setError('');
+    setMappingConfirmed(false);
+    setColumnMap({});
+    setHeaders([]);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      
+      const res = await fetch('/api/extract-headers', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!res.ok) {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to extract headers');
+        } else {
+          const text = await res.text();
+          throw new Error(`Server error (${res.status}): ${text.substring(0, 100)}`);
+        }
+      }
+      
+      const data = await res.json();
+      setHeaders(data.headers.map((h: any) => String(h).trim()));
+      setColumnMap(data.columnMap || {});
+    } catch (err: any) {
+      console.error('Error reading headers:', err);
+      setError(err.message || 'Failed to read Excel file headers.');
+    }
+  };
 
   const checkUsageLimit = async (): Promise<boolean> => {
     if (!user) return false;
@@ -39,7 +92,7 @@ export function Upload() {
   };
 
   const handleProcessRFQ = async () => {
-    if (!file) return;
+    if (!file || !mappingConfirmed) return;
     setLoading(true);
     setError('');
     
@@ -53,16 +106,39 @@ export function Upload() {
       const formData = new FormData();
       formData.append('file', file);
       if (user) formData.append('user_id', user.id);
+      formData.append('columnMap', JSON.stringify(columnMap));
       
-      const res = await fetch('/api/upload-rfq', {
+      const response = await fetch('/api/upload-rfq', {
         method: 'POST',
         body: formData
       });
       
-      const contentType = res.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to process file');
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const err = await response.json();
+          throw new Error(err.message || err.error || 'Processing failed');
+        } else {
+          const text = await response.text();
+          throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`);
+        }
+      }
+      
+      const contentType = response.headers.get('Content-Type') || '';
+      
+      if (contentType.includes('application/vnd.openxmlformats') ||
+          contentType.includes('application/octet-stream')) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'RFQ_Output.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        console.log('Process result:', data);
         setResult(data);
 
         if (user) {
@@ -80,11 +156,6 @@ export function Upload() {
           // Increment usage counter
           await supabase.rpc('increment_usage', { p_user_id: user.id });
         }
-
-      } else {
-        const text = await res.text();
-        console.error('Non-JSON response:', text.substring(0, 200));
-        throw new Error(`Server returned an unexpected response (${res.status}). Please try again.`);
       }
     } catch (err: any) {
       setError(err.message);
@@ -141,7 +212,7 @@ export function Upload() {
           <input 
             type="file" 
             accept=".xlsx, .xls"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={handleFileSelect}
             className="hidden"
             ref={fileInputRef}
           />
@@ -153,7 +224,7 @@ export function Upload() {
             Select File
           </button>
           
-          {file && (
+          {file && !mappingConfirmed && (
             <div className="mt-6 px-4 py-2 bg-blue-50 dark:bg-[rgba(126,231,135,0.1)] border border-blue-100 dark:border-[rgba(126,231,135,0.2)] rounded-lg flex items-center gap-2 max-w-full">
               <FileSpreadsheet className="w-4 h-4 text-[#00A8FF] dark:text-[#7EE787] shrink-0" />
               <p className="text-sm font-medium text-blue-600 dark:text-[#7EE787] truncate">
@@ -163,9 +234,82 @@ export function Upload() {
           )}
         </div>
 
+        {file && headers.length > 0 && !mappingConfirmed && (
+          <div className="mt-8 w-full text-left bg-white dark:bg-[#161B22] p-6 rounded-xl border border-slate-200 dark:border-[#30363D] shadow-sm">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-[#E6EDF3] mb-4 flex items-center gap-2">
+              <Settings2 className="w-5 h-5 text-[#00A8FF] dark:text-[#7EE787]" />
+              Map Columns
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-[#8B949E] mb-6">
+              We've auto-detected some columns. Please verify and map the required fields to your Excel columns.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {REQUIRED_FIELDS.map(field => (
+                <div key={field.id} className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-slate-700 dark:text-[#E6EDF3]">
+                    {field.label}
+                  </label>
+                  <select
+                    value={columnMap[field.id] !== undefined ? columnMap[field.id] : ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setColumnMap(prev => {
+                        const next = { ...prev };
+                        if (val === '') delete next[field.id];
+                        else next[field.id] = parseInt(val, 10);
+                        return next;
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0D1117] border border-slate-200 dark:border-[#30363D] rounded-lg text-sm text-slate-900 dark:text-[#E6EDF3] focus:ring-2 focus:ring-[#00A8FF] dark:focus:ring-[#7EE787]"
+                  >
+                    <option value="">-- Select Column --</option>
+                    {headers.map((h, i) => (
+                      <option key={i} value={i}>
+                        {h || `Column ${i + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setMappingConfirmed(true)}
+                className="flex items-center gap-2 px-6 py-2 bg-[#00A8FF] hover:bg-[#0090DB] dark:bg-[#238636] dark:hover:bg-[#2EA043] text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Confirm Mapping <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {file && mappingConfirmed && (
+          <div className="mt-6 px-4 py-3 bg-green-50 dark:bg-[rgba(126,231,135,0.1)] border border-green-200 dark:border-[rgba(126,231,135,0.2)] rounded-lg flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-[#7EE787]" />
+              <div>
+                <p className="text-sm font-medium text-green-800 dark:text-[#7EE787]">
+                  {file.name}
+                </p>
+                <p className="text-xs text-green-600 dark:text-[#7EE787]/80">
+                  Columns mapped successfully
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setMappingConfirmed(false)}
+              className="text-xs font-medium text-green-700 hover:text-green-800 dark:text-[#7EE787] dark:hover:text-white underline"
+            >
+              Edit Mapping
+            </button>
+          </div>
+        )}
+
         <button 
           onClick={handleProcessRFQ}
-          disabled={loading || !file}
+          disabled={loading || !file || !mappingConfirmed}
           className="mt-8 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#00A8FF] to-[#008DE6] hover:from-[#008DE6] hover:to-[#0070B8] dark:from-[#238636] dark:to-[#2EA043] dark:hover:from-[#2EA043] dark:hover:to-[#3FB950] text-white px-6 py-3.5 rounded-xl font-semibold transition-all shadow-[0_0_20px_rgba(0,168,255,0.3)] hover:shadow-[0_0_30px_rgba(0,168,255,0.5)] dark:shadow-[0_0_20px_rgba(126,231,135,0.2)] dark:hover:shadow-[0_0_30px_rgba(126,231,135,0.4)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}

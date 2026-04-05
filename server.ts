@@ -135,7 +135,7 @@ app.post('/api/extract-headers', upload.single('file'), (req, res) => {
     const { detectColumns } = require('./backend/engine');
     const detectedMap = detectColumns(headers);
     
-    res.json({ headers, headerRowIndex, detectedMap });
+    res.json({ headers, headerRowIndex, columnMap: detectedMap });
   } catch (error: any) {
     console.error('Error extracting headers:', error);
     res.status(500).json({ error: error.message || 'Failed to extract headers' });
@@ -233,8 +233,34 @@ app.post('/api/test/single', async (req, res) => {
     }
     const userId = rowData.user_id;
     const { catalogue, notMfgList, userCustomRules } = await fetchUserContext(userId);
-    const { processedRow } = await processSingleRow(rowData, 1, catalogue, notMfgList, userCustomRules, false);
-    res.json({ success: true, result: processedRow });
+    const { processedRow, flags } = await processSingleRow(rowData, 1, catalogue, notMfgList, userCustomRules, false);
+    
+    // Standardize the response shape as requested
+    const matchInfo = processedRow.match_info || 'Unmatched';
+    const result = {
+      valveType: processedRow.valveType,
+      valveType_match_info: matchInfo,
+      size: processedRow.size,
+      size_match_info: matchInfo,
+      pressureClass: processedRow.class,
+      pressureClass_match_info: matchInfo,
+      moc: processedRow.moc,
+      moc_match_info: matchInfo,
+      standard: processedRow.standard,
+      standard_match_info: matchInfo,
+      endType: processedRow.endDetail,
+      endType_match_info: matchInfo,
+      trim: processedRow.trim,
+      trim_match_info: matchInfo,
+      gasket: processedRow.gasket,
+      packing: processedRow.packing,
+      operator: processedRow.operator,
+      endDetail: processedRow.endDetail,
+      bolting: processedRow.bolting,
+      flags: flags
+    };
+    
+    res.json({ success: true, result });
   } catch (error: any) {
     console.error('Error processing single row:', error);
     res.status(500).json({ error: error.message || 'Failed to process single row' });
@@ -311,19 +337,19 @@ async function startServer() {
     });
   }
 
+  // Global error handler to ensure JSON responses for API routes
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('API Error:', err);
+    if (req.path.startsWith('/api/')) {
+      res.status(500).json({ error: err.message || 'Internal Server Error' });
+    } else {
+      res.status(500).json({ error: err.message || 'Internal server error' });
+    }
+  });
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
-
-// Global error handler to ensure JSON responses for API routes
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  if (req.path.startsWith('/api/')) {
-    console.error('API Error:', err);
-    res.status(500).json({ error: err.message || 'Internal Server Error' });
-  } else {
-    next(err);
-  }
-});
 
 startServer();
