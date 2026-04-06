@@ -99,7 +99,29 @@ app.post('/api/upload-rfq', upload.single('file'), async (req, res) => {
     const filename = req.file.originalname;
     const columnMap = req.body.columnMap ? JSON.parse(req.body.columnMap) : undefined;
 
-    const result = await processRFQ(req.file.buffer, userId, filename, columnMap);
+    const authHeader = req.headers.authorization;
+    let catalogueMap: any[] = [];
+    
+    if (authHeader && userId) {
+      const token = authHeader.replace('Bearer ', '');
+      const SUPABASE_URL = process.env.SUPABASE_URL || 'https://stqkpgkyvtmvvijilgmc.supabase.co';
+      const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0cWtwZ2t5dnRtdnZpamlsZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjcyMzYsImV4cCI6MjA5MDI0MzIzNn0.92FxL9YuEwesIb1T-vowKqY1no58a0FKIGwBqlMu-uw';
+      
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${token}` } }
+      });
+      
+      const { data: catalogueItems } = await supabase
+        .from('product_catalogue')
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (catalogueItems) {
+        catalogueMap = catalogueItems;
+      }
+    }
+
+    const result = await processRFQ(req.file.buffer, userId, filename, columnMap, catalogueMap);
     res.json(result);
   } catch (error: any) {
     console.error('Error processing RFQ:', error);

@@ -352,7 +352,7 @@ export function Upload() {
               <div className="absolute bottom-0 right-0 w-3 h-3 hidden dark:block border-b-2 border-r-2 border-[#7EE787] opacity-40 rounded-br-xl" />
               <div className="text-xs font-semibold text-slate-500 dark:text-[#8B949E] uppercase tracking-widest mb-2">Matched</div>
               <div className="text-4xl font-display font-bold text-[#00A8FF] dark:text-[#7EE787]">
-                {result.processed_rows.filter((r: any) => r.catalogueConfidence === 'high' || r.catalogueConfidence === 'medium').length}
+                {result.processed_rows.filter((r: any) => r.score >= 70).length}
               </div>
             </div>
             <div className="bg-white dark:bg-[#161B22] p-6 rounded-xl border border-slate-200 dark:border-[#21262D] shadow-sm relative">
@@ -360,7 +360,7 @@ export function Upload() {
               <div className="absolute bottom-0 right-0 w-3 h-3 hidden dark:block border-b-2 border-r-2 border-[#7EE787] opacity-40 rounded-br-xl" />
               <div className="text-xs font-semibold text-slate-500 dark:text-[#8B949E] uppercase tracking-widest mb-2">Unmatched</div>
               <div className="text-4xl font-display font-bold text-slate-500 dark:text-[#8B949E]">
-                {result.processed_rows.filter((r: any) => r.catalogueConfidence === 'none' || !r.catalogueConfidence).length}
+                {result.processed_rows.filter((r: any) => r.score < 70).length}
               </div>
             </div>
             <div className="bg-white dark:bg-[#161B22] p-6 rounded-xl border border-slate-200 dark:border-[#21262D] shadow-sm relative">
@@ -417,6 +417,7 @@ export function Upload() {
                     <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Score</th>
                     <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">MOC</th>
                     <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Trim</th>
+                    <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Seat</th>
                     <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Gasket</th>
                     <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Packing</th>
                     <th className="px-4 py-3 border-b border-slate-200 dark:border-[#21262D]">Operator</th>
@@ -437,20 +438,20 @@ export function Upload() {
                         <td className="px-4 py-3 text-xs">{row.standard}</td>
                         <td className="px-4 py-3 text-xs font-medium">{row.catalogueModel || row.model}</td>
                         <td className="px-4 py-3 text-xs">
-                          {row.catalogueConfidence === 'high' && <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">{row.catalogueMatchScore} (High)</span>}
-                          {row.catalogueConfidence === 'medium' && <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">{row.catalogueMatchScore} (Med)</span>}
-                          {row.catalogueConfidence === 'low' && <span className="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full">{row.catalogueMatchScore} (Low)</span>}
-                          {(!row.catalogueConfidence || row.catalogueConfidence === 'none') && <span className="px-2 py-1 bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400 rounded-full">0 (None)</span>}
+                          {row.score >= 70 && <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">{row.score} (Match)</span>}
+                          {row.score >= 40 && row.score < 70 && <span className="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full">{row.score} (Review)</span>}
+                          {row.score < 40 && <span className="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 rounded-full">{row.score} (Fail)</span>}
                         </td>
                         <td className="px-4 py-3 text-xs">{row.moc}</td>
                         <td className="px-4 py-3 text-xs">{row.trim}</td>
+                        <td className="px-4 py-3 text-xs">{row.seat}</td>
                         <td className="px-4 py-3 text-xs max-w-[150px] truncate" title={row.gasket}>{row.gasket}</td>
                         <td className="px-4 py-3 text-xs max-w-[150px] truncate" title={row.packing}>{row.packing}</td>
                         <td className="px-4 py-3 text-xs">{row.operator}</td>
                         <td className="px-4 py-3 text-xs">{row.endDetail}</td>
                         <td className="px-4 py-3 text-xs">{row.bolting}</td>
                         <td className="px-4 py-3 text-xs">
-                          {row.catalogueConfidence === 'high' || row.catalogueConfidence === 'medium' ? (
+                          {row.score >= 70 ? (
                             <CheckCircle2 className="w-5 h-5 text-green-500" />
                           ) : (
                             <AlertTriangle className="w-5 h-5 text-yellow-500" />

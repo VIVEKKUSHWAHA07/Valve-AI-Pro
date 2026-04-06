@@ -28,10 +28,12 @@ export interface ProcessedRow {
   operator: string;
   endDetail: string;
   bolting: string;
+  seat?: string;
   originalRow: any;
   score: number;
   matchId?: string;
   match_info?: string;
+  catalogueModel?: string;
 }
 
 export interface Flag {
@@ -57,7 +59,8 @@ export interface ProcessResult {
 
 export function detectColumns(headers: any[]): Record<string, number> {
   const HEADER_ALIASES: Record<string, string[]> = {
-    desc:     ['DESCRIPTION','DESC','ITEM DESC','VALVE TYPE','TYPE','ITEM DESCRIPTION','PARTICULARS','SERVICE'],
+    desc:     ['DESCRIPTION','DESC','ITEM DESC','ITEM DESCRIPTION','PARTICULARS','SERVICE'],
+    type:     ['VALVE TYPE','TYPE'],
     size:     ['SIZE','NPS','DN','BORE','VALVE SIZE','PIPE SIZE'],
     rating:   ['RATING','CLASS','PRESSURE CLASS','PRESSURE RATING','CL','ANSI CLASS','PRESS CLASS'],
     body:     ['BODY','MOC','MATERIAL','BODY MATERIAL','BODY MOC','MATERIAL OF CONSTRUCTION','BODY/BONNET'],
@@ -81,27 +84,27 @@ export function detectColumns(headers: any[]): Record<string, number> {
 }
 
 export function extractSizeFromText(text: string): string | null {
-  const sizeMatch = text.match(
-    /\b(\d+(?:\.\d+)?)\s*(?:inch|inches|"|''|in\b)/i
-  ) || text.match(/\bdn\s*(\d+)/i) || text.match(/\b(\d+(?:\.\d+)?)\s*mm\b/i);
+  const dnMatch = text.match(/\bDN\s*(\d+)\b/i);
+  if (dnMatch) {
+    const dn = parseInt(dnMatch[1]);
+    const dnMap: {[k:number]:string} = {
+      15:'1/2"', 20:'3/4"', 25:'1"', 32:'1.1/4"',
+      40:'1.1/2"', 50:'2"', 65:'2.1/2"', 80:'3"',
+      100:'4"', 125:'5"', 150:'6"', 200:'8"',
+      250:'10"', 300:'12"', 350:'14"', 400:'16"',
+      450:'18"', 500:'20"', 600:'24"'
+    };
+    return dnMap[dn] || `DN${dn}`;
+  }
 
-  if (sizeMatch) {
-    let val = sizeMatch[1];
-    if (text.match(/\bdn\s*(\d+)/i)) {
-      const dn = parseInt(val);
-      const dnMap: {[k:number]:string} = {
-        15:'1/2"', 20:'3/4"', 25:'1"', 32:'1.1/4"',
-        40:'1.1/2"', 50:'2"', 65:'2.1/2"', 80:'3"',
-        100:'4"', 125:'5"', 150:'6"', 200:'8"',
-        250:'10"', 300:'12"', 350:'14"', 400:'16"',
-        450:'18"', 500:'20"', 600:'24"'
-      };
-      return dnMap[dn] || `DN${dn}`;
-    } else if (text.match(/\b(\d+(?:\.\d+)?)\s*mm\b/i)) {
-      // Very basic mm to inch conversion for common sizes if needed, or just return mm
-      return `${val}mm`;
-    }
-    return `${val}"`;
+  const mmMatch = text.match(/\b(\d+(?:\.\d+)?)\s*mm\b/i);
+  if (mmMatch) {
+    return `${mmMatch[1]}mm`;
+  }
+
+  const inchMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(?:inch|inches|"|''|in\b|NB\b|bore\b)/i);
+  if (inchMatch) {
+    return `${inchMatch[1]}"`;
   }
 
   // Fallback for fractions like 1/2" 3/4" 1.1/2" 1-1/2" 1 1/2"
@@ -402,7 +405,7 @@ function extractOperatorFromText(text: string,
   return sizeInches && sizeInches <= 4 ? 'Lever' : 'Handwheel';
 }
 
-export async function processSingleRow(rowData: any, rowIndex: number = 1, catalogue: Record<string, string[]> = {}, notMfgList: string[] = ['Butterfly Valve', 'Plug Valve', 'Strainer', 'Double Block & Bleed'], userCustomRules: any[] = [], isParagraphMode: boolean = false): Promise<{ processedRow: ProcessedRow, flags: Flag[], isNotMfg: boolean }> {
+export async function processSingleRow(rowData: any, rowIndex: number = 1, catalogue: any[] = [], notMfgList: string[] = ['Butterfly Valve', 'Plug Valve', 'Strainer', 'Double Block & Bleed'], userCustomRules: any[] = [], isParagraphMode: boolean = false): Promise<{ processedRow: ProcessedRow, flags: Flag[], isNotMfg: boolean }> {
   const flags: Flag[] = [];
   
   let desc = '';
@@ -422,7 +425,14 @@ export async function processSingleRow(rowData: any, rowIndex: number = 1, catal
   if (isParagraphMode) {
     valveType = combinedDesc.split(',')[0].trim();
   } else {
-    valveType = detectValveType(rowData.desc, rowData.body, rowData.construct);
+    // Attempt from desc first, fallback to type, then body/construct
+    valveType = detectValveType(rowData.desc);
+    if (valveType === 'Unknown Valve' && rowData.type) {
+      valveType = detectValveType(rowData.type);
+    }
+    if (valveType === 'Unknown Valve') {
+      valveType = detectValveType('', rowData.body, rowData.construct);
+    }
   }
   
   let isNotMfg = false;
@@ -482,6 +492,19 @@ export async function processSingleRow(rowData: any, rowIndex: number = 1, catal
 
     const sizeInches = size !== 'Not specified' ? parseFloat(size.replace('"', '')) : null;
     const operator   = extractOperatorFromText(desc, sizeInches);
+    
+    // Extract Seat
+    let seat = '';
+    const seatMatch = desc.match(/SEAT\s*:?\s*([^,;]+)/i);
+    if (seatMatch) {
+      seat = seatMatch[1].trim();
+    } else if (desc.toUpperCase().includes('PTFE')) {
+      seat = 'PTFE';
+    } else if (desc.toUpperCase().includes('PEEK')) {
+      seat = 'PEEK';
+    } else if (desc.toUpperCase().includes('METAL SEAT')) {
+      seat = 'Metal Seated';
+    }
 
     processedRow.valveType     = valveType;
     processedRow.size          = size;
@@ -495,6 +518,7 @@ export async function processSingleRow(rowData: any, rowIndex: number = 1, catal
     processedRow.gasket        = getGasket(valveType);
     processedRow.packing       = getPacking(valveType, standard);
     processedRow.bolting       = getBolting(moc.resolvedMoc) || 'Standard Bolting';
+    processedRow.seat          = seat;
 
     if (isNotMfg) {
       processedRow.gasket = `Not manufactured by XYZ Company - ${valveType}`;
@@ -622,58 +646,47 @@ export async function processSingleRow(rowData: any, rowIndex: number = 1, catal
     }
   }
 
-  // ── CATALOGUE MATCHING ──
-  if (!isNotMfg && !ruleMatched) {
-    let highestLayer = 0;
-    let hasUnmatched = false;
-    let hasRestricted = false;
+  // ── SCORE CALCULATION & CATALOGUE MATCHING ──
+  processedRow.score = calculateScore(processedRow, catalogue);
 
-    const checkField = async (extractedValue: string, category: string) => {
-      if (catalogue[category] && catalogue[category].length > 0) {
-        hasRestricted = true;
-        const result = await matchAgainstCatalogue(extractedValue, catalogue[category], category);
-        if (!result.matched) {
-          hasUnmatched = true;
-          return '-';
-        } else {
-          highestLayer = Math.max(highestLayer, result.layer || 0);
-          return result.matched;
+  if (isNotMfg) {
+    processedRow.match_info = 'Unmatched';
+    processedRow.score = 0;
+  } else if (ruleMatched) {
+    processedRow.score = 100;
+  } else {
+    if (Array.isArray(catalogue) && catalogue.length > 0) {
+      if (processedRow.score >= 70) {
+        processedRow.match_info = 'Catalogue Match';
+        const matchedItem = catalogue.find(i => (i.part_number || i.id) === processedRow.matchId);
+        if (matchedItem) {
+          processedRow.catalogueModel = matchedItem.part_number || matchedItem.description;
+        }
+      } else if (processedRow.score >= 40) {
+        processedRow.match_info = 'Review Required';
+        const matchedItem = catalogue.find(i => (i.part_number || i.id) === processedRow.matchId);
+        if (matchedItem) {
+          processedRow.catalogueModel = matchedItem.part_number || matchedItem.description;
         }
       } else {
-        return extractedValue;
+        processedRow.match_info = 'Unmatched';
+        flags.push({
+          row: rowIndex,
+          field: 'Catalogue',
+          message: 'No matching product found in catalogue (score < 40)',
+          type: 'warning'
+        });
       }
-    };
-
-    processedRow.valveType = await checkField(processedRow.valveType || '', 'valve_type');
-    processedRow.size = await checkField(processedRow.size || '', 'size');
-    processedRow.class = await checkField(processedRow.class || '', 'pressure_class');
-    processedRow.moc = await checkField(processedRow.moc || '', 'moc');
-    processedRow.standard = await checkField(processedRow.standard || '', 'standard');
-    processedRow.endDetail = await checkField(processedRow.endDetail || '', 'end_type');
-    processedRow.trim = await checkField(processedRow.trim || '', 'trim');
-
-    if (hasUnmatched) {
-      processedRow.match_info = 'Unmatched';
-      flags.push({
-        row: rowIndex,
-        field: 'Catalogue',
-        message: 'No matching product found in catalogue for one or more fields',
-        type: 'warning'
-      });
-    } else if (!hasRestricted) {
-      processedRow.match_info = 'Unrestricted — No catalogue entries';
     } else {
-      processedRow.match_info = `Catalogue Match — Layer ${highestLayer} (${highestLayer === 1 ? 'Alias' : highestLayer === 2 ? 'Fuzzy' : 'AI'})`;
+      processedRow.match_info = 'Unrestricted — No catalogue entries';
     }
-  } else if (isNotMfg) {
-    processedRow.match_info = 'Unmatched';
   }
 
   return { processedRow, flags, isNotMfg };
 }
 
 export async function fetchUserContext(userId?: string) {
-  let catalogue: Record<string, string[]> = {};
+  let catalogue: any[] = [];
   let catalogueCount = 0;
   let notMfgList = ['Butterfly Valve', 'Plug Valve', 'Strainer', 'Double Block & Bleed'];
   let userCustomRules: any[] = [];
@@ -685,19 +698,14 @@ export async function fetchUserContext(userId?: string) {
 
   try {
     const [{ data: catData, error: catError }, { data: rulesData, error: rulesError }, { data: customData }] = await Promise.all([
-      sb.from('catalogue_items').select('*').eq('user_id', userId),
+      sb.from('product_catalogue').select('*').eq('user_id', userId),
       sb.from('engine_rules').select('*').eq('user_id', userId),
       sb.from('user_custom_rules').select('*').eq('user_id', userId).eq('active', true).order('priority', { ascending: true })
     ]);
     
     if (!catError && catData) {
-      for (const item of catData) {
-        if (item.is_available) {
-          if (!catalogue[item.category]) catalogue[item.category] = [];
-          catalogue[item.category].push(item.value);
-          catalogueCount++;
-        }
-      }
+      catalogue = catData;
+      catalogueCount = catData.length;
     }
 
     if (!rulesError && rulesData) {
@@ -812,7 +820,36 @@ export async function fetchUserContext(userId?: string) {
   return { catalogue, catalogueCount, notMfgList, userCustomRules };
 }
 
-export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?: string, customColumnMap?: Record<string, number>): Promise<ProcessResult> {
+function buildAliasMap(catalogueMap: any[]): Record<string, string> {
+  const aliasMap: Record<string, string> = {};
+  if (!Array.isArray(catalogueMap)) return aliasMap;
+  const valveTypes = catalogueMap.filter(i => i.category?.toLowerCase().includes('valve')).map(i => i.description || '');
+  
+  for (const canonicalName of valveTypes) {
+    if (!canonicalName) continue;
+    const lower = canonicalName.toLowerCase();
+    
+    // Always map the full name to itself
+    aliasMap[lower] = canonicalName;
+    
+    // Auto-generate short aliases from significant words
+    // Remove common words: valve, type, mounted, series
+    const words = lower.replace(/\b(valve|type|mounted|series|pattern)\b/g, '').trim();
+    if (words.length > 2) aliasMap[words] = canonicalName;
+    
+    // Generate acronym: "Floating Ball Valve" → "FBV"
+    const acronym = canonicalName
+      .split(' ')
+      .map(w => w[0])
+      .join('')
+      .toUpperCase();
+    if (acronym.length >= 2) aliasMap[acronym.toLowerCase()] = canonicalName;
+  }
+  
+  return aliasMap;
+}
+
+export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?: string, customColumnMap?: Record<string, number>, catalogueMap?: any[]): Promise<ProcessResult> {
   const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
@@ -891,6 +928,14 @@ export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?:
 
   // Fetch product catalogue and rules
   const { catalogue, catalogueCount, notMfgList, userCustomRules } = await fetchUserContext(userId);
+  
+  // Use passed catalogueMap if available, otherwise fallback to the one from fetchUserContext
+  const finalCatalogue = catalogueMap && catalogueMap.length > 0 ? catalogueMap : catalogue;
+  
+  // Build auto-aliases from catalogue
+  const autoAliases = buildAliasMap(finalCatalogue);
+  // Merge auto-aliases into ALIAS_MAP
+  Object.assign(ALIAS_MAP.valve_type, autoAliases);
 
   const result: ProcessResult = {
     total_rows: dataRows.length,
@@ -900,7 +945,7 @@ export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?:
     processed_rows: [],
     columnMap: columnMap,
     format: 'multi_column',
-    catalogue_count: catalogueCount
+    catalogue_count: catalogueMap ? catalogueMap.length : catalogueCount
   };
 
   // Helper — get value by detected column, fallback to fixed index
@@ -920,6 +965,7 @@ export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?:
       rowData = {
         item:      get(row, 'item', 0),
         desc:      get(row, 'desc', 1),
+        type:      get(row, 'type', -1),
         spec:      get(row, 'spec', 2),
         rating:    get(row, 'rating', 3),
         body:      get(row, 'body', 4),
@@ -931,7 +977,7 @@ export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?:
       };
     }
 
-    const { processedRow, flags, isNotMfg } = await processSingleRow(rowData, i + (isSingleColumn ? 1 : headerRowIndex + 2), catalogue, notMfgList, userCustomRules, isParagraphMode);
+    const { processedRow, flags, isNotMfg } = await processSingleRow(rowData, i + (isSingleColumn ? 1 : headerRowIndex + 2), finalCatalogue, notMfgList, userCustomRules, isParagraphMode);
 
     if (isNotMfg) {
       result.not_manufactured++;
@@ -948,7 +994,7 @@ export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?:
   // Tab 1 — OUTPUT
   const outputHeaders = [
     'Sr No', 'Tag No', 'Description', 'Valve Type', 'Size', 'Pressure Class',
-    'MOC', 'End Type', 'Model', 'Standard', 'Trim', 'Match Info', 'Remarks'
+    'MOC', 'End Type', 'Model', 'Standard', 'Trim', 'Seat', 'Operator', 'Bolting', 'Packing', 'Gasket', 'Match Info', 'Remarks'
   ];
   const outputRows = result.processed_rows.map((r, idx) => [
     idx + 1,
@@ -962,6 +1008,11 @@ export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?:
     r.model,
     r.standard,
     r.trim,
+    r.seat || '',
+    r.operator || '',
+    r.bolting || '',
+    r.packing || '',
+    r.gasket || '',
     r.match_info || 'Unmatched',
     result.flags.filter(f => f.row === idx + (isSingleColumn ? 1 : headerRowIndex + 2)).map(f => f.message).join('; ')
   ]);
@@ -970,7 +1021,7 @@ export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?:
   wsOutput['!cols'] = [
     {wch:6},{wch:10},{wch:40},{wch:16},{wch:8},
     {wch:14},{wch:14},{wch:10},{wch:24},{wch:14},
-    {wch:18},{wch:30},{wch:30}
+    {wch:18},{wch:15},{wch:15},{wch:20},{wch:20},{wch:20},{wch:30},{wch:30}
   ];
   xlsx.utils.book_append_sheet(wb, wsOutput, 'OUTPUT');
 
@@ -1008,7 +1059,7 @@ export async function processRFQ(fileBuffer: Buffer, userId?: string, filename?:
   let companyName = 'Unknown';
   const sb = getSupabase();
   if (userId && sb) {
-    const { data: userData } = await sb.from('users').select('company_name').eq('id', userId).single();
+    const { data: userData } = await sb.from('profiles').select('company_name').eq('id', userId).single();
     if (userData) companyName = userData.company_name;
   }
 
@@ -1174,33 +1225,41 @@ function resolveField(input: string, aliases: Record<string, string[]>, tokens: 
 }
 
 const VALVE_ALIASES: Record<string, string[]> = {
-  gate:       ['GATE VALVE','GATE V/V','GATE VLV','GTV','WEDGE VALVE','SLAB GATE','KNIFE GATE'],
-  globe:      ['GLOBE VALVE','GLOBE V/V','GLOBE VLV','GLV','GBV'],
-  ball:       ['BALL VALVE','BALL V/V','BALL VLV','BV','FLOATING BALL','TRUNNION BALL','FBV','TMBV'],
-  check:      ['CHECK VALVE','CHECK V/V','CHK','NRV','NON RETURN','SWING CHECK','LIFT CHECK'],
+  gate:       ['GATE VALVE','GATE V/V','GATE VLV','GTV','WEDGE VALVE','SLAB GATE','EXPANDING GATE','GV'],
+  globe:      ['GLOBE VALVE','GLOBE V/V','GLOBE VLV','GLV','GBV','Y-TYPE GLOBE','Y TYPE'],
+  floating_ball: ['FLOATING BALL','SIDE ENTRY FLOATING','FBV'],
+  trunnion_ball: ['TRUNNION','TRUNNION MOUNTED','TMBV'],
+  ball:       ['BALL VALVE','BALL V/V','BALL VLV','BV'],
+  swing_check: ['SWING CHECK'],
+  piston_check: ['PISTON CHECK'],
   dual_plate: ['DUAL PLATE','DP CHECK','WAFER CHECK'],
-  butterfly:  ['BUTTERFLY VALVE','BFV','BFLY'],
+  check:      ['CHECK VALVE','CHECK V/V','CHK','NRV','NON RETURN','LIFT CHECK'],
+  butterfly:  ['BUTTERFLY VALVE','BFV','BFLY','HIGH PERFORMANCE BUTTERFLY','HPBV'],
   plug:       ['PLUG VALVE','PLV','PV'],
   strainer:   ['STRAINER','Y STRAINER','BASKET STRAINER'],
   dbb:        ['DBB','DOUBLE BLOCK AND BLEED']
 };
 
 const VALVE_TOKENS: Record<string, string[]> = {
-  gate:       ['GATE','GTW','WEDGE','SLAB','KNIFE'],
-  globe:      ['GLOBE','GLB'],
-  ball:       ['BALL','TRUNNION','FLOATING','TMBV','FBV'],
-  check:      ['CHECK','CHK','NRV','NON RETURN','SWING','LIFT'],
+  gate:       ['GATE','GTW','WEDGE','SLAB','KNIFE','GV'],
+  globe:      ['GLOBE','GLB','GLV'],
+  floating_ball: ['FLOATING','FBV'],
+  trunnion_ball: ['TRUNNION','TMBV'],
+  ball:       ['BALL','BV'],
+  swing_check: ['SWING'],
+  piston_check: ['PISTON'],
   dual_plate: ['DUAL','WAFER','DP CHECK'],
-  butterfly:  ['BUTTERFLY','BFLY','BFV'],
+  check:      ['CHECK','CHK','NRV','NON RETURN','LIFT'],
+  butterfly:  ['BUTTERFLY','BFLY','BFV','HPBV'],
   plug:       ['PLUG','PLV'],
   strainer:   ['STRAINER','Y-TYPE','BASKET'],
   dbb:        ['DOUBLE BLOCK','DBB','BLEED']
 };
 
 const VALVE_CANONICAL: Record<string, string> = {
-  gate: 'GATE VALVE', globe: 'GLOBE VALVE', ball: 'BALL VALVE',
-  check: 'CHECK VALVE', dual_plate: 'DUAL PLATE CHECK VALVE', butterfly: 'BUTTERFLY VALVE',
-  plug: 'PLUG VALVE', strainer: 'STRAINER', dbb: 'DOUBLE BLOCK AND BLEED'
+  gate: 'Gate Valve', globe: 'Globe Valve', floating_ball: 'Floating Ball Valve', trunnion_ball: 'Trunnion Mounted Ball Valve', ball: 'Ball Valve',
+  swing_check: 'Check Valve - Swing Type', piston_check: 'Lift Check Valve - Piston Type', check: 'Check Valve', dual_plate: 'Dual Plate Check Valve', butterfly: 'Butterfly Valve',
+  plug: 'Plug Valve', strainer: 'Strainer', dbb: 'Double Block and Bleed'
 };
 
 function detectValveType(desc: string, body = '', construct = ''): string {
@@ -1328,6 +1387,15 @@ function getModel(type: string, size: string, cls: string, end: string): string 
     if (cls === '800') return '3 Piece, Bolted, Side Entry - MFR Std';
     return '2 Piece, Bolted, Side Entry - Long pattern';
   }
+  if (type.includes('Check')) {
+    if (['150', '300', '600'].includes(cls)) return 'Bolted Cover';
+    if (['900', '1500', '2500'].includes(cls)) {
+      if (s >= 2) return 'Pressure Seal Cover';
+      return 'Bolted Cover - Mfg. Std.';
+    }
+    if (cls === '800') return 'Bolted Cover - Mfg. Std.';
+    return '';
+  }
   if (['150', '300', '600'].includes(cls)) return 'Bolted - Long pattern';
   if (['900', '1500', '2500'].includes(cls)) {
     if (s >= 2) {
@@ -1358,7 +1426,17 @@ const MOC_ALIASES: Record<string, string[]> = {
   f55:    ['F55','A182 F55'],
   inconel:['INCONEL','INC','ALLOY 625','ALLOY 825'],
   monel:  ['MONEL','ALLOY 400'],
-  hastelloy:['HASTELLOY','ALLOY C276']
+  hastelloy:['HASTELLOY','ALLOY C276'],
+  wc6:    ['WC6','A217 WC6'],
+  wc9:    ['WC9','A217 WC9'],
+  c5:     ['C5','A217 C5'],
+  c12:    ['C12','A217 C12'],
+  c12a:   ['C12A','A217 C12A'],
+  f11:    ['F11','A182 F11'],
+  f22:    ['F22','A182 F22'],
+  f5:     ['F5','A182 F5'],
+  f9:     ['F9','A182 F9'],
+  f91:    ['F91','A182 F91']
 };
 
 const MOC_TOKENS: Record<string, string[]> = {
@@ -1366,7 +1444,9 @@ const MOC_TOKENS: Record<string, string[]> = {
   cf8: ['CF8','304'], cf8m: ['CF8M','316'], cf3: ['CF3','304L'], cf3m: ['CF3M','316L'],
   a105: ['A105'], lf2: ['LF2'], f304: ['F304'], f316: ['F316'],
   f51: ['F51','DUPLEX'], f53: ['F53','SUPER DUPLEX'], f55: ['F55'],
-  inconel: ['INCONEL'], monel: ['MONEL'], hastelloy: ['HASTELLOY']
+  inconel: ['INCONEL'], monel: ['MONEL'], hastelloy: ['HASTELLOY'],
+  wc6: ['WC6'], wc9: ['WC9'], c5: ['C5'], c12: ['C12'], c12a: ['C12A'],
+  f11: ['F11'], f22: ['F22'], f5: ['F5'], f9: ['F9'], f91: ['F91']
 };
 
 const MOC_CANONICAL: Record<string, string> = {
@@ -1374,13 +1454,17 @@ const MOC_CANONICAL: Record<string, string> = {
   cf8: 'A351 CF8', cf8m: 'A351 CF8M', cf3: 'A351 CF3', cf3m: 'A351 CF3M',
   a105: 'A105N', lf2: 'A350 LF2', f304: 'A182 F304', f316: 'A182 F316',
   f51: 'A182 F51 (Duplex)', f53: 'A182 F53 (Super Duplex)', f55: 'A182 F55',
-  inconel: 'Inconel', monel: 'Monel', hastelloy: 'Hastelloy'
+  inconel: 'Inconel', monel: 'Monel', hastelloy: 'Hastelloy',
+  wc6: 'A217 WC6', wc9: 'A217 WC9', c5: 'A217 C5', c12: 'A217 C12', c12a: 'A217 C12A',
+  f11: 'A182 F11', f22: 'A182 F22', f5: 'A182 F5', f9: 'A182 F9', f91: 'A182 F91'
 };
 
 const MOC_CAST: Record<string, boolean> = {
   wcb: true, wcc: true, lcb: true, lcc: true, cf8: true, cf8m: true, cf3: true, cf3m: true,
   a105: false, lf2: false, f304: false, f316: false, f51: false, f53: false, f55: false,
-  inconel: false, monel: false, hastelloy: false
+  inconel: false, monel: false, hastelloy: false,
+  wc6: true, wc9: true, c5: true, c12: true, c12a: true,
+  f11: false, f22: false, f5: false, f9: false, f91: false
 };
 
 function getMOC(bodyText: string): { resolved: string | null, cast: boolean, flag: string | null } {
@@ -1461,9 +1545,9 @@ function getTrim(valveType: string, size: string | null, trimRaw: string, mocRaw
     raw = String(mocRaw || '').trim().toUpperCase();
   }
   
-  const s = size ? parseFloat(size) : 0;
+  const s = size && size !== 'Not specified' ? parseFloat(size) : 0;
   const noStellite = /W\/?O\s*STELLITE|WITHOUT\s*STELLITE|NO\s*STELLITE|NON.STELLITE|PLAIN\s*TRIM|PLAIN\s*SEAT|W\/?O\s*HARDFACING/i.test(raw);
-  const col = s < 2 ? 'ssw' : (noStellite ? 'wo' : 'ss');
+  const col = s > 0 && s < 2 ? 'ssw' : (noStellite ? 'wo' : 'ss');
   
   const resolvedKey = resolveField(raw, TRIM_ALIASES, TRIM_TOKENS, TRIM_CANONICAL);
   
@@ -1559,9 +1643,9 @@ function getBolting(resolvedMOC: string | null): string | null {
   
   if (m.includes('WCB') || m.includes('WCC') || m.includes('A105') || m.includes('BRONZE') || m.includes('B62'))
     return 'ASTM A193 Gr.B7 / ASTM A194 Gr.2H';
-  if (m.includes('LF2') || m.includes('LCB'))
+  if (m.includes('LF2') || m.includes('LCB') || m.includes('LCC'))
     return 'ASTM A320 Gr.L7 / ASTM A194 Gr.7';
-  if (m.includes('F316') || m.includes('CF8M') || m.includes('F304'))
+  if (m.includes('F316') || m.includes('CF8M') || m.includes('F304') || m.includes('CF8') || m.includes('CF3') || m.includes('CF3M'))
     return 'ASTM A193 Gr.B8 CL.1 / ASTM A194 Gr.8';
   if (m.includes('F44') || m.includes('CK3MCU'))
     return 'ASTM A193 Gr.B16 / ASTM A194 Gr.7';
@@ -1569,20 +1653,20 @@ function getBolting(resolvedMOC: string | null): string | null {
     return 'ASTM A193 Gr.B8M CL.2 / ASTM A194 Gr.8M';
   if (m.includes('HASTELLOY') || m.includes('INCONEL') || m.includes('MONEL'))
     return 'ASTM A193 Gr.B8 CL.2 / ASTM A194 Gr.8';
+  if (m.includes('WC6') || m.includes('WC9') || m.includes('C5') || m.includes('C12') || m.includes('C12A') || m.includes('F11') || m.includes('F22') || m.includes('F5') || m.includes('F9') || m.includes('F91'))
+    return 'ASTM A193 Gr.B16 / ASTM A194 Gr.4';
   
   return null;
 }
 
 function calculateScore(row: ProcessedRow, catalogue: any[]): number {
-  if (!catalogue || catalogue.length === 0) {
+  if (!Array.isArray(catalogue) || catalogue.length === 0) {
     // Fallback if no catalogue is loaded
     let score = 0;
     if (row.valveType && row.valveType !== 'Unknown Valve') score += 50;
-    if (row.size) score += 30;
-    if (row.class) score += 30;
-    if (row.endDetail) score += 10;
-    if (row.moc && row.moc !== 'Unknown') score += 10;
-    if (row.trim) score += 10;
+    if (row.size) score += 20;
+    if (row.class) score += 15;
+    if (row.moc && row.moc !== 'Unknown') score += 15;
     return Math.min(score, 100);
   }
 
@@ -1613,7 +1697,7 @@ function calculateScore(row: ProcessedRow, catalogue: any[]): number {
     // 3. Rating Match (15 points)
     if (row.class) {
       const classNum = row.class.replace('CLASS ', '').trim();
-      if (desc.includes(classNum) || desc.includes(`CL${classNum}`) || desc.includes(`CL ${classNum}`)) {
+      if (desc.includes(classNum) || desc.includes(`CL${classNum}`) || desc.includes(`CL ${classNum}`) || desc.includes(`${classNum}#`)) {
         score += 15;
       }
     }
@@ -1630,11 +1714,11 @@ function calculateScore(row: ProcessedRow, catalogue: any[]): number {
 
     if (score > bestScore) {
       bestScore = score;
-      bestMatchId = item.code || item.id;
+      bestMatchId = item.part_number || item.id;
     }
   }
 
-  if (bestScore >= 70) {
+  if (bestScore >= 40) {
     row.matchId = bestMatchId;
   }
   
