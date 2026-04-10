@@ -261,7 +261,7 @@ export function Catalogue() {
 
       <div className="flex flex-col md:flex-row gap-4 animate-fade-up delay-100">
         <div className="relative flex-1 flex items-center">
-          <Search className="absolute left-3 w-5 h-5 text-[var(--text3)]" />
+          <Search className="w-5 h-5 text-[var(--text3)]" />
           <input
             type="text"
             placeholder="Search items or categories..."

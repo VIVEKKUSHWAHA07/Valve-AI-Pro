@@ -85,7 +85,7 @@ app.post('/api/catalogue/upload', upload.single('file'), async (req, res) => {
     res.json({ success: true, count: products.length });
   } catch (error: any) {
     console.error('Error uploading catalogue:', error);
-    res.status(500).json({ error: error.message || 'Failed to upload catalogue' });
+    res.status(400).json({ error: error.message || 'Failed to upload catalogue' });
   }
 });
 
@@ -103,51 +103,58 @@ app.post('/api/upload-rfq', upload.single('file'), async (req, res) => {
     let fetchedCatalogueItems: any[] = [];
     let userRules: any[] = [];
     
-    const SUPABASE_URL = process.env.SUPABASE_URL || 'https://stqkpgkyvtmvvijilgmc.supabase.co';
-    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0cWtwZ2t5dnRtdnZpamlsZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjcyMzYsImV4cCI6MjA5MDI0MzIzNn0.92FxL9YuEwesIb1T-vowKqY1no58a0FKIGwBqlMu-uw';
-    
-    let supabase;
-    if (authHeader) {
+    if (authHeader && userId) {
       const token = authHeader.replace('Bearer ', '');
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const SUPABASE_URL = process.env.SUPABASE_URL || 'https://stqkpgkyvtmvvijilgmc.supabase.co';
+      const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0cWtwZ2t5dnRtdnZpamlsZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjcyMzYsImV4cCI6MjA5MDI0MzIzNn0.92FxL9YuEwesIb1T-vowKqY1no58a0FKIGwBqlMu-uw';
+      
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: { headers: { Authorization: `Bearer ${token}` } }
       });
-    } else {
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
-    
-    const { data: catalogueItems, error } = await supabase
-      .from('catalogue_items')
-      .select('*');
       
-    console.log('[Catalogue] error:', error);
-    console.log('[Catalogue] rows loaded:', catalogueItems?.length ?? 0);
-    console.log('[Catalogue] sample row:', JSON.stringify(catalogueItems?.[0]));
-      
-    if (catalogueItems) {
-      fetchedCatalogueItems = catalogueItems;
-    }
+      const { data: catalogueItems, error } = await supabase
+        .from('catalogue_items')
+        .select('*')
+        .eq('user_id', userId)
+        .range(0, 9999);
+        
+      console.log('upload-rfq catalogue fetch:', catalogueItems?.length, error);
+        
+      if (catalogueItems) {
+        fetchedCatalogueItems = catalogueItems;
+      }
 
-    if (userId) {
-      const { data: rules } = await supabase
-        .from('user_rules')
+      const { data: engineRules } = await supabase
+        .from('engine_rules')
         .select('*')
         .eq('user_id', userId)
         .range(0, 9999);
       
-      if (rules) {
-        userRules = rules;
+      const { data: customRules } = await supabase
+        .from('user_custom_rules')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('active', true)
+        .order('priority', { ascending: true })
+        .range(0, 9999);
+      
+      if (engineRules) {
+        userRules = [...userRules, ...engineRules];
+      }
+      if (customRules) {
+        userRules = [...userRules, ...customRules];
       }
     }
 
     const result = await processRFQ(req.file.buffer, columnMap || {}, fetchedCatalogueItems, userRules, filename, userId);
     
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="Working_Sheet.xlsx"`);
-    res.send(result);
+    res.json(result);
   } catch (error: any) {
-    console.error('Error processing RFQ:', error);
-    res.status(500).json({ error: error.message || 'Failed to process RFQ' });
+    console.error('[Process] Fatal error:', error);
+    res.status(400).json({ 
+      error: error.message || 'Internal server error',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -179,8 +186,8 @@ app.post('/api/extract-headers', upload.single('file'), (req, res) => {
     
     res.json({ headers, headerRowIndex, columnMap: detectedMap });
   } catch (error: any) {
-    console.error('Error extracting headers:', error);
-    res.status(500).json({ error: error.message || 'Failed to extract headers' });
+    console.error('[Preview] Fatal error:', error);
+    res.status(400).json({ error: error.message || 'Preview failed' });
   }
 });
 
@@ -262,7 +269,7 @@ app.post('/api/admin/confirm-email', async (req, res) => {
 
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
@@ -305,7 +312,7 @@ app.post('/api/test/single', async (req, res) => {
     res.json({ success: true, result });
   } catch (error: any) {
     console.error('Error processing single row:', error);
-    res.status(500).json({ error: error.message || 'Failed to process single row' });
+    res.status(400).json({ error: error.message || 'Failed to process single row' });
   }
 });
 
@@ -319,7 +326,7 @@ app.post('/api/test/fuzzy', async (req, res) => {
     res.json({ success: true, matches });
   } catch (error: any) {
     console.error('Error in fuzzy match:', error);
-    res.status(500).json({ error: error.message || 'Failed to run fuzzy match' });
+    res.status(400).json({ error: error.message || 'Failed to run fuzzy match' });
   }
 });
 
@@ -333,7 +340,7 @@ app.post('/api/test/trace', async (req, res) => {
     res.json({ success: true, trace });
   } catch (error: any) {
     console.error('Error in rule trace:', error);
-    res.status(500).json({ error: error.message || 'Failed to run rule trace' });
+    res.status(400).json({ error: error.message || 'Failed to run rule trace' });
   }
 });
 
@@ -351,51 +358,55 @@ app.post('/api/test/batch', upload.single('file'), async (req, res) => {
     let fetchedCatalogueItems: any[] = [];
     let userRules: any[] = [];
     
-    const SUPABASE_URL = process.env.SUPABASE_URL || 'https://stqkpgkyvtmvvijilgmc.supabase.co';
-    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0cWtwZ2t5dnRtdnZpamlsZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjcyMzYsImV4cCI6MjA5MDI0MzIzNn0.92FxL9YuEwesIb1T-vowKqY1no58a0FKIGwBqlMu-uw';
-    
-    let supabase;
-    if (authHeader) {
+    if (authHeader && userId) {
       const token = authHeader.replace('Bearer ', '');
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const SUPABASE_URL = process.env.SUPABASE_URL || 'https://stqkpgkyvtmvvijilgmc.supabase.co';
+      const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0cWtwZ2t5dnRtdnZpamlsZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjcyMzYsImV4cCI6MjA5MDI0MzIzNn0.92FxL9YuEwesIb1T-vowKqY1no58a0FKIGwBqlMu-uw';
+      
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: { headers: { Authorization: `Bearer ${token}` } }
       });
-    } else {
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
-    
-    const { data: catalogueItems, error } = await supabase
-      .from('catalogue_items')
-      .select('*');
       
-    console.log('[Catalogue] error:', error);
-    console.log('[Catalogue] rows loaded:', catalogueItems?.length ?? 0);
-    console.log('[Catalogue] sample row:', JSON.stringify(catalogueItems?.[0]));
-      
-    if (catalogueItems) {
-      fetchedCatalogueItems = catalogueItems;
-    }
+      const { data: catalogueItems, error } = await supabase
+        .from('catalogue_items')
+        .select('*')
+        .eq('user_id', userId)
+        .range(0, 9999);
+        
+      console.log('test/batch catalogue fetch:', catalogueItems?.length, error);
+        
+      if (catalogueItems) {
+        fetchedCatalogueItems = catalogueItems;
+      }
 
-    if (userId) {
-      const { data: rules } = await supabase
-        .from('user_rules')
+      const { data: engineRules } = await supabase
+        .from('engine_rules')
         .select('*')
         .eq('user_id', userId)
         .range(0, 9999);
       
-      if (rules) {
-        userRules = rules;
+      const { data: customRules } = await supabase
+        .from('user_custom_rules')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('active', true)
+        .order('priority', { ascending: true })
+        .range(0, 9999);
+      
+      if (engineRules) {
+        userRules = [...userRules, ...engineRules];
+      }
+      if (customRules) {
+        userRules = [...userRules, ...customRules];
       }
     }
 
     const result = await processRFQ(req.file.buffer, columnMap || {}, fetchedCatalogueItems, userRules, filename, userId);
     
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="Working_Sheet.xlsx"`);
-    res.send(result);
+    res.json(result);
   } catch (error: any) {
     console.error('Error processing batch RFQ:', error);
-    res.status(500).json({ error: error.message || 'Failed to process batch RFQ' });
+    res.status(400).json({ error: error.message || 'Failed to process batch RFQ' });
   }
 });
 
@@ -406,6 +417,15 @@ app.get('/api/rules', (req, res) => {
 
 app.post('/api/rules', (req, res) => {
   res.json({ success: true, message: 'Rules saved successfully' });
+});
+
+// API Error handler BEFORE Vite middleware
+app.use('/api', (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('API Error:', err);
+  res.status(400).json({ 
+    error: err.message || 'Internal Server Error',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
 });
 
 async function startServer() {
@@ -427,9 +447,9 @@ async function startServer() {
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('API Error:', err);
     if (req.path.startsWith('/api/')) {
-      res.status(500).json({ error: err.message || 'Internal Server Error' });
+      res.status(400).json({ error: err.message || 'Internal Server Error' });
     } else {
-      res.status(500).json({ error: err.message || 'Internal server error' });
+      res.status(400).json({ error: err.message || 'Internal server error' });
     }
   });
 

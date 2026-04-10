@@ -76,6 +76,10 @@ body {
   color: white;
   border-radius: 11px;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .v-btn-primary::before {
@@ -105,6 +109,10 @@ body {
   border: 0.5px solid var(--border);
   border-radius: 11px;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .v-btn-ghost::before {
@@ -162,6 +170,7 @@ body {
   border-radius: 9px;
   display: flex;
   align-items: center;
+  gap: 0.75rem;
 }
 
 .v-pulse-circle {
@@ -216,6 +225,7 @@ body {
   border-radius: 7px;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
   padding: 4px 12px;
   font-size: 12px;
 }
@@ -278,4 +288,11 @@ body {
 .v-input:focus {
   border-color: rgba(34,197,94,0.5);
   outline: none;
+}
+
+/* Ensure icons don't shrink and align properly with text */
+svg {
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
 }

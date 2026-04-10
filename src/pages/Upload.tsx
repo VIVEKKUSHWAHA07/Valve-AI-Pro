@@ -110,6 +110,9 @@ export function Upload() {
       
       const response = await fetch('/api/upload-rfq', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
         body: formData
       });
       
@@ -130,11 +133,24 @@ export function Upload() {
           contentType.includes('application/octet-stream')) {
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
+        
+        // We still need to set the result to show the UI
+        // But we don't have the JSON data anymore.
+        // We should probably change the backend to return JSON with a base64 string,
+        // OR we just download the file and show a success message.
+        setResult({
+          total_rows: 0,
+          processed_rows: [],
+          flags: [],
+          catalogue_count: 0,
+          download_url: url
+        });
+        
         const a = document.createElement('a');
         a.href = url;
         a.download = 'RFQ_Output.xlsx';
         a.click();
-        URL.revokeObjectURL(url);
+        // URL.revokeObjectURL(url); // Don't revoke immediately if we want to keep the download button working
       } else {
         const data = await response.json();
         if (data.error) throw new Error(data.error);
@@ -146,8 +162,8 @@ export function Upload() {
             user_id: user.id,
             filename: file.name,
             total_rows: data.total_rows,
-            matched_rows: data.processed_rows.filter((r: any) => r.catalogueConfidence === 'high' || r.catalogueConfidence === 'medium').length,
-            unmatched_rows: data.processed_rows.filter((r: any) => r.catalogueConfidence === 'none' || !r.catalogueConfidence).length,
+            matched_rows: data.processed_rows.filter((r: any) => r.score >= 70).length,
+            unmatched_rows: data.processed_rows.filter((r: any) => r.score < 70).length,
             flag_count: data.flags?.length || 0,
             download_data: JSON.stringify(data.processed_rows)
           });

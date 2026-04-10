@@ -106,8 +106,8 @@ export function Profile() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Full Name</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="flex items-center gap-2">
+                  <div className="pl-3 flex items-center pointer-events-none">
                     <User className="h-5 w-5 text-[var(--text3)]" />
                   </div>
                   <input
@@ -115,7 +115,7 @@ export function Profile() {
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
-                    className="v-input block w-full pl-10 h-10 focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                    className="v-input block w-full h-10 focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
                     placeholder="John Doe"
                   />
                 </div>
@@ -123,8 +123,8 @@ export function Profile() {
 
               <div>
                 <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Company Name</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="flex items-center gap-2">
+                  <div className="pl-3 flex items-center pointer-events-none">
                     <Building2 className="h-5 w-5 text-[var(--text3)]" />
                   </div>
                   <input
@@ -132,7 +132,7 @@ export function Profile() {
                     name="companyName"
                     value={formData.companyName}
                     onChange={handleChange}
-                    className="v-input block w-full pl-10 h-10 focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                    className="v-input block w-full h-10 focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
                     placeholder="Acme Corp"
                   />
                 </div>
@@ -140,8 +140,8 @@ export function Profile() {
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Role / Title</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="flex items-center gap-2">
+                  <div className="pl-3 flex items-center pointer-events-none">
                     <Briefcase className="h-5 w-5 text-[var(--text3)]" />
                   </div>
                   <input
@@ -149,7 +149,7 @@ export function Profile() {
                     name="role"
                     value={formData.role}
                     onChange={handleChange}
-                    className="v-input block w-full pl-10 h-10 focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                    className="v-input block w-full h-10 focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
                     placeholder="Procurement Engineer"
                   />
                 </div>

@@ -364,7 +364,7 @@ export function AdminPanel() {
             <div className="p-4 border-b border-[var(--border)] bg-[var(--bg3)] flex justify-between items-center">
               <h3 className="font-semibold text-[var(--text)]">Access List</h3>
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
+                <Search className="w-4 h-4 text-[var(--text3)]" />
                 <input 
                   type="text" 
                   placeholder="Search emails..." 

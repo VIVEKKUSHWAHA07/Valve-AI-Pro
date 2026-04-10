@@ -174,8 +174,8 @@ export function Auth() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Email Address</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <div className="flex items-center gap-2">
+              <div className="pl-3 flex items-center pointer-events-none">
                 <Mail className="h-5 w-5 text-[var(--text3)]" />
               </div>
               <input
@@ -183,7 +183,7 @@ export function Auth() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="v-input block w-full pl-10 pr-3 py-2.5"
+                className="v-input block w-full pr-3 py-2.5"
                 placeholder="you@company.com"
               />
             </div>
@@ -191,8 +191,8 @@ export function Auth() {
 
           <div>
             <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Password</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <div className="flex items-center gap-2">
+              <div className="pl-3 flex items-center pointer-events-none">
                 <Lock className="h-5 w-5 text-[var(--text3)]" />
               </div>
               <input
@@ -200,7 +200,7 @@ export function Auth() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="v-input block w-full pl-10 pr-3 py-2.5"
+                className="v-input block w-full pr-3 py-2.5"
                 placeholder="••••••••"
               />
             </div>
